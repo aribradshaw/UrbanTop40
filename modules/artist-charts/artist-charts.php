@@ -32,6 +32,12 @@ class UrbanTop40_Artist_Charts {
         // AJAX handlers
         add_action('wp_ajax_get_artist_chart_data', array($this, 'get_artist_chart_data'));
         add_action('wp_ajax_nopriv_get_artist_chart_data', array($this, 'get_artist_chart_data'));
+        
+        // Add debug action for development
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            add_action('wp_ajax_debug_artist_charts_paths', array($this, 'debug_artist_charts_paths'));
+            add_action('wp_ajax_nopriv_debug_artist_charts_paths', array($this, 'debug_artist_charts_paths'));
+        }
     }
     
     /**
@@ -164,6 +170,74 @@ class UrbanTop40_Artist_Charts {
                         </ul>
                     </div>
                 </div>
+                
+                <div class="urban-top-40-admin-card">
+                    <h2>Debug & Testing</h2>
+                    <p>Use these tools to troubleshoot any issues:</p>
+                    
+                    <div class="debug-tools">
+                        <h3>Test Chart Data Loading:</h3>
+                        <button type="button" class="button button-secondary" onclick="testArtistChartData()">Test Data Loading</button>
+                        <div id="test-results" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 4px; display: none;"></div>
+                        
+                        <h3>Debug Paths (WP_DEBUG only):</h3>
+                        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                            <button type="button" class="button button-secondary" onclick="debugArtistChartPaths()">Debug Paths</button>
+                            <div id="debug-results" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 4px; display: none;"></div>
+                        <?php else: ?>
+                            <p><em>Enable WP_DEBUG in wp-config.php to access debug tools</em></p>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <script>
+                    function testArtistChartData() {
+                        const resultsDiv = document.getElementById('test-results');
+                        resultsDiv.style.display = 'block';
+                        resultsDiv.innerHTML = 'Testing...';
+                        
+                        jQuery.post(ajaxurl, {
+                            action: 'get_artist_chart_data',
+                            artist: 'the_beatles',
+                            nonce: '<?php echo wp_create_nonce('urban_top_40_charts_nonce'); ?>'
+                        })
+                        .done(function(response) {
+                            if (response.success) {
+                                resultsDiv.innerHTML = '<div style="color: green;"><strong>✓ Success!</strong> Data loaded successfully.<br>Artist: ' + response.data.name + '<br>Songs: ' + response.data.totalSongs + '</div>';
+                            } else {
+                                resultsDiv.innerHTML = '<div style="color: red;"><strong>✗ Error:</strong> ' + response.data + '</div>';
+                            }
+                        })
+                        .fail(function(xhr, status, error) {
+                            resultsDiv.innerHTML = '<div style="color: red;"><strong>✗ AJAX Error:</strong> ' + error + '</div>';
+                        });
+                    }
+                    
+                    function debugArtistChartPaths() {
+                        const resultsDiv = document.getElementById('debug-results');
+                        resultsDiv.style.display = 'block';
+                        resultsDiv.innerHTML = 'Debugging...';
+                        
+                        jQuery.post(ajaxurl, {
+                            action: 'debug_artist_charts_paths',
+                            nonce: '<?php echo wp_create_nonce('urban_top_40_charts_nonce'); ?>'
+                        })
+                        .done(function(response) {
+                            if (response.success) {
+                                let debugHtml = '<div style="color: blue;"><strong>Debug Information:</strong></div>';
+                                debugHtml += '<pre style="background: #fff; padding: 10px; border: 1px solid #ddd; overflow: auto; max-height: 400px;">';
+                                debugHtml += JSON.stringify(response.data, null, 2);
+                                debugHtml += '</pre>';
+                                resultsDiv.innerHTML = debugHtml;
+                            } else {
+                                resultsDiv.innerHTML = '<div style="color: red;"><strong>✗ Debug Error:</strong> ' + response.data + '</div>';
+                            }
+                        })
+                        .fail(function(xhr, status, error) {
+                            resultsDiv.innerHTML = '<div style="color: red;"><strong>✗ AJAX Error:</strong> ' + error + '</div>';
+                        });
+                    }
+                    </script>
+                </div>
             </div>
         </div>
         <?php
@@ -173,37 +247,107 @@ class UrbanTop40_Artist_Charts {
      * Display available artists from TypeScript files
      */
     private function display_available_artists() {
-        $artist_charts_dir = URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/';
+        $artist_charts_dir = $this->get_artist_charts_directory();
         
-        if (!is_dir($artist_charts_dir)) {
-            echo '<p>No artist charts directory found.</p>';
+        if (!$artist_charts_dir) {
+            echo '<p>No artist charts directory found. Debug info:</p>';
+            echo '<ul>';
+            echo '<li>URBAN_TOP_40_PLUGIN_DIR: ' . (defined('URBAN_TOP_40_PLUGIN_DIR') ? URBAN_TOP_40_PLUGIN_DIR : 'Not defined') . '</li>';
+            echo '<li>plugin_dir_path: ' . plugin_dir_path(dirname(dirname(__FILE__))) . '</li>';
+            echo '<li>Current file: ' . __FILE__ . '</li>';
+            echo '<li>WP_CONTENT_DIR: ' . (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : 'Not defined') . '</li>';
+            echo '</ul>';
             return;
         }
         
         $ts_files = glob($artist_charts_dir . '*.ts');
         
         if (empty($ts_files)) {
-            echo '<p>No TypeScript files found in artist charts directory.</p>';
+            echo '<p>No TypeScript files found in artist charts directory: ' . esc_html($artist_charts_dir) . '</p>';
             return;
         }
         
         echo '<table class="wp-list-table widefat fixed striped">';
-        echo '<thead><tr><th>Artist</th><th>File</th><th>Shortcode</th></tr></thead>';
+        echo '<thead><tr><th>Artist</th><th>File</th><th>Shortcode</th><th>Status</th></tr></thead>';
         echo '<tbody>';
         
         foreach ($ts_files as $file) {
             $filename = basename($file, '.ts');
             $artist_name = str_replace('_', ' ', $filename);
             $shortcode = '[artist_chart artist="' . $filename . '"]';
+            $status = is_readable($file) ? '<span style="color: green;">✓ Readable</span>' : '<span style="color: red;">✗ Not readable</span>';
             
             echo '<tr>';
             echo '<td>' . esc_html(ucwords($artist_name)) . '</td>';
             echo '<td>' . esc_html(basename($file)) . '</td>';
             echo '<td><code>' . esc_html($shortcode) . '</code></td>';
+            echo '<td>' . $status . '</td>';
             echo '</tr>';
         }
         
         echo '</tbody></table>';
+        
+        // Add debug information
+        echo '<div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #0073aa;">';
+        echo '<h4>Debug Information:</h4>';
+        echo '<p><strong>Artist Charts Directory:</strong> ' . esc_html($artist_charts_dir) . '</p>';
+        echo '<p><strong>Directory exists:</strong> ' . (is_dir($artist_charts_dir) ? 'Yes' : 'No') . '</p>';
+        echo '<p><strong>Directory readable:</strong> ' . (is_readable($artist_charts_dir) ? 'Yes' : 'No') . '</p>';
+        echo '<p><strong>Files found:</strong> ' . count($ts_files) . '</p>';
+        echo '</div>';
+    }
+    
+    /**
+     * Get the artist charts directory with multiple fallback methods
+     */
+    private function get_artist_charts_directory() {
+        // Method 1: Use plugin directory constant
+        if (defined('URBAN_TOP_40_PLUGIN_DIR')) {
+            $path = URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/';
+            if (is_dir($path)) {
+                return $path;
+            }
+        }
+        
+        // Method 2: Use WordPress plugin directory functions
+        $plugin_dir = plugin_dir_path(dirname(dirname(__FILE__)));
+        $path = $plugin_dir . 'assets/artistcharts/';
+        if (is_dir($path)) {
+            return $path;
+        }
+        
+        // Method 3: Use relative path from current file
+        $current_dir = dirname(__FILE__);
+        $path = $current_dir . '/../../assets/artistcharts/';
+        if (is_dir($path)) {
+            return $path;
+        }
+        
+        // Method 4: Use WordPress content directory
+        if (defined('WP_CONTENT_DIR')) {
+            // Try multiple possible plugin directory names (case sensitivity issue)
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $path = WP_CONTENT_DIR . '/plugins/' . $plugin_dir . '/assets/artistcharts/';
+                if (is_dir($path)) {
+                    return $path;
+                }
+            }
+        }
+        
+        // Method 5: Use ABSPATH
+        if (defined('ABSPATH')) {
+            // Try multiple possible plugin directory names (case sensitivity issue)
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $path = ABSPATH . 'wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/';
+                if (is_dir($path)) {
+                    return $path;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -221,18 +365,18 @@ class UrbanTop40_Artist_Charts {
             wp_send_json_error('Artist parameter is required');
         }
         
-        // Get the TypeScript file path
-        $ts_file_path = URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/' . $artist . '.ts';
+        // Get the TypeScript file path using multiple fallback methods
+        $ts_file_path = $this->get_artist_file_path($artist);
         
-        if (!file_exists($ts_file_path)) {
-            wp_send_json_error('Artist data file not found');
+        if (!$ts_file_path) {
+            wp_send_json_error('Artist data file not found. Checked paths: ' . $this->get_debug_paths($artist));
         }
         
         // Read and parse the TypeScript file
         $ts_content = file_get_contents($ts_file_path);
         
         if ($ts_content === false) {
-            wp_send_json_error('Unable to read artist data file');
+            wp_send_json_error('Unable to read artist data file: ' . $ts_file_path);
         }
         
         // Extract the data object from the TypeScript file
@@ -257,6 +401,160 @@ class UrbanTop40_Artist_Charts {
         } else {
             wp_send_json_error('Unable to extract artist data from file');
         }
+    }
+    
+    /**
+     * Get the artist file path with multiple fallback methods
+     */
+    private function get_artist_file_path($artist) {
+        // Method 1: Use plugin directory constant
+        if (defined('URBAN_TOP_40_PLUGIN_DIR')) {
+            $path = URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/' . $artist . '.ts';
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+        
+        // Method 2: Use WordPress plugin directory functions
+        $plugin_dir = plugin_dir_path(dirname(dirname(__FILE__)));
+        $path = $plugin_dir . 'assets/artistcharts/' . $artist . '.ts';
+        if (file_exists($path)) {
+            return $path;
+        }
+        
+        // Method 3: Use relative path from current file
+        $current_dir = dirname(__FILE__);
+        $path = $current_dir . '/../../assets/artistcharts/' . $artist . '.ts';
+        if (file_exists($path)) {
+            return $path;
+        }
+        
+        // Method 4: Use WordPress content directory
+        if (defined('WP_CONTENT_DIR')) {
+            // Try multiple possible plugin directory names (case sensitivity issue)
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $path = WP_CONTENT_DIR . '/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+                if (file_exists($path)) {
+                    return $path;
+                }
+            }
+        }
+        
+        // Method 5: Use ABSPATH
+        if (defined('ABSPATH')) {
+            // Try multiple possible plugin directory names (case sensitivity issue)
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $path = ABSPATH . 'wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+                if (file_exists($path)) {
+                    return $path;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get debug information about paths that were checked
+     */
+    private function get_debug_paths($artist) {
+        $paths = array();
+        
+        if (defined('URBAN_TOP_40_PLUGIN_DIR')) {
+            $paths[] = 'URBAN_TOP_40_PLUGIN_DIR: ' . URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/' . $artist . '.ts';
+        }
+        
+        $plugin_dir = plugin_dir_path(dirname(dirname(__FILE__)));
+        $paths[] = 'plugin_dir_path: ' . $plugin_dir . 'assets/artistcharts/' . $artist . '.ts';
+        
+        $current_dir = dirname(__FILE__);
+        $paths[] = 'relative path: ' . $current_dir . '/../../assets/artistcharts/' . $artist . '.ts';
+        
+        if (defined('WP_CONTENT_DIR')) {
+            // Show multiple possible plugin directory names
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $paths[] = 'WP_CONTENT_DIR/' . $plugin_dir . ': ' . WP_CONTENT_DIR . '/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+            }
+        }
+        
+        if (defined('ABSPATH')) {
+            // Show multiple possible plugin directory names
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $paths[] = 'ABSPATH/' . $plugin_dir . ': ' . ABSPATH . 'wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+            }
+        }
+        
+        return implode(', ', $paths);
+    }
+    
+    /**
+     * Debug method to help troubleshoot path issues
+     */
+    public function debug_artist_charts_paths() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Unauthorized');
+        }
+        
+        $debug_info = array(
+            'plugin_file' => __FILE__,
+            'current_dir' => dirname(__FILE__),
+            'parent_dir' => dirname(dirname(__FILE__)),
+            'grandparent_dir' => dirname(dirname(dirname(__FILE__))),
+            'constants' => array(
+                'URBAN_TOP_40_PLUGIN_DIR' => defined('URBAN_TOP_40_PLUGIN_DIR') ? URBAN_TOP_40_PLUGIN_DIR : 'Not defined',
+                'URBAN_TOP_40_PLUGIN_URL' => defined('URBAN_TOP_40_PLUGIN_URL') ? URBAN_TOP_40_PLUGIN_URL : 'Not defined',
+                'WP_CONTENT_DIR' => defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR : 'Not defined',
+                'ABSPATH' => defined('ABSPATH') ? ABSPATH : 'Not defined',
+                'WP_PLUGIN_DIR' => defined('WP_PLUGIN_DIR') ? WP_PLUGIN_DIR : 'Not defined'
+            ),
+            'functions' => array(
+                'plugin_dir_path' => plugin_dir_path(dirname(dirname(__FILE__))),
+                'plugin_dir_url' => plugin_dir_url(dirname(dirname(__FILE__))),
+                'get_template_directory' => get_template_directory(),
+                'get_stylesheet_directory' => get_stylesheet_directory()
+            ),
+            'test_paths' => array()
+        );
+        
+        // Test various paths
+        $test_paths = array(
+            'URBAN_TOP_40_PLUGIN_DIR/assets/artistcharts/' => defined('URBAN_TOP_40_PLUGIN_DIR') ? URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/' : null,
+            'plugin_dir_path/assets/artistcharts/' => plugin_dir_path(dirname(dirname(__FILE__))) . 'assets/artistcharts/',
+            'relative_path/../../assets/artistcharts/' => dirname(__FILE__) . '/../../assets/artistcharts/'
+        );
+        
+        // Test multiple possible plugin directory names for case sensitivity
+        if (defined('WP_CONTENT_DIR')) {
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $test_paths['WP_CONTENT_DIR/plugins/' . $plugin_dir . '/assets/artistcharts/'] = WP_CONTENT_DIR . '/plugins/' . $plugin_dir . '/assets/artistcharts/';
+            }
+        }
+        
+        if (defined('ABSPATH')) {
+            $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+            foreach ($possible_plugin_dirs as $plugin_dir) {
+                $test_paths['ABSPATH/wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/'] = ABSPATH . 'wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/';
+            }
+        }
+        
+        foreach ($test_paths as $label => $path) {
+            if ($path) {
+                $debug_info['test_paths'][$label] = array(
+                    'path' => $path,
+                    'exists' => file_exists($path),
+                    'is_dir' => is_dir($path),
+                    'is_readable' => is_readable($path),
+                    'contents' => is_dir($path) ? scandir($path) : 'Not a directory'
+                );
+            }
+        }
+        
+        wp_send_json_success($debug_info);
     }
 }
 

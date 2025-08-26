@@ -1,0 +1,65 @@
+name: 🚀 Deploy to FTP Server
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🐘 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        
+    - name: 📦 Install dependencies (if any)
+      run: |
+        # Add any dependency installation here if needed
+        echo "No dependencies to install for this plugin"
+        
+    - name: 🔍 Check file structure
+      run: |
+        echo "📁 Checking plugin structure..."
+        ls -la
+        echo "📁 Checking modules..."
+        ls -la modules/
+        echo "📁 Checking assets..."
+        ls -la assets/
+        
+    - name: 🚀 Deploy to FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /wp-content/plugins/urbantop40/
+        local-dir: ./
+        exclude: |
+          **/.git*
+          **/.github*
+          **/node_modules/**
+          **/README.md
+          **/TROUBLESHOOTING.md
+          **/test-*.php
+          **/.gitignore
+          **/composer.*
+          **/package.*
+          **/yarn.lock
+          **/package-lock.json
+          **/.env*
+          **/.vscode*
+          **/*.log
+          **/debug-*.php
+          
+    - name: ✅ Deployment complete
+      run: |
+        echo "🎉 Plugin successfully deployed to FTP server!"
+        echo "📅 Deployment time: $(date)"
+        echo "🔗 Server: ${{ secrets.FTP_SERVER }}"
+        echo "📁 Directory: /wp-content/plugins/urbantop40/"

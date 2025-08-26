@@ -1,0 +1,44 @@
+{
+  "ftp": {
+    "server": "192.232.249.125",
+    "port": 21,
+    "username": "admin@flygonlc.com",
+    "directory": "/wp-content/plugins/urbantop40/",
+    "description": "FTP server configuration for automatic deployment"
+  },
+  "deployment": {
+    "trigger": "Push to main/master branch",
+    "exclude_files": [
+      ".git*",
+      ".github*",
+      "README.md",
+      "TROUBLESHOOTING.md",
+      "test-*.php",
+      "debug-*.php",
+      "*.log",
+      "node_modules/",
+      ".vscode/",
+      ".idea/"
+    ],
+    "include_files": [
+      "*.php",
+      "*.css",
+      "*.js",
+      "*.ts",
+      "*.png",
+      "*.jpg",
+      "*.jpeg",
+      "*.gif",
+      "*.svg",
+      "*.ttf",
+      "*.woff",
+      "*.woff2"
+    ]
+  },
+  "setup_instructions": [
+    "1. Add FTP credentials as GitHub Secrets",
+    "2. Push code to main/master branch",
+    "3. GitHub Actions will automatically deploy to FTP",
+    "4. Check Actions tab for deployment status"
+  ]
+}
