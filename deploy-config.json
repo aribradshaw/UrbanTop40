@@ -3,7 +3,7 @@
     "server": "192.232.249.125",
     "port": 21,
     "username": "admin@flygonlc.com",
-    "directory": "/wp-content/plugins/urbantop40/",
+    "directory": "/public_html/website_2b04249d/wp-content/plugins/urbantop40/",
     "description": "FTP server configuration for automatic deployment"
   },
   "deployment": {
