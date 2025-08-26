@@ -294,6 +294,16 @@ class UrbanTop40_Artist_Charts {
         echo '<p><strong>Directory exists:</strong> ' . (is_dir($artist_charts_dir) ? 'Yes' : 'No') . '</p>';
         echo '<p><strong>Directory readable:</strong> ' . (is_readable($artist_charts_dir) ? 'Yes' : 'No') . '</p>';
         echo '<p><strong>Files found:</strong> ' . count($ts_files) . '</p>';
+        
+        // Check specific file existence
+        $test_file = $artist_charts_dir . 'the_beatles.ts';
+        echo '<p><strong>Test file (the_beatles.ts):</strong> ' . esc_html($test_file) . '</p>';
+        echo '<p><strong>File exists:</strong> ' . (file_exists($test_file) ? 'Yes' : 'No') . '</p>';
+        echo '<p><strong>File readable:</strong> ' . (is_readable($test_file) ? 'Yes' : 'No') . '</p>';
+        if (file_exists($test_file)) {
+            echo '<p><strong>File size:</strong> ' . number_format(filesize($test_file)) . ' bytes</p>';
+            echo '<p><strong>File permissions:</strong> ' . substr(sprintf('%o', fileperms($test_file)), -4) . '</p>';
+        }
         echo '</div>';
     }
     
@@ -369,7 +379,45 @@ class UrbanTop40_Artist_Charts {
         $ts_file_path = $this->get_artist_file_path($artist);
         
         if (!$ts_file_path) {
-            wp_send_json_error('Artist data file not found. Checked paths: ' . $this->get_debug_paths($artist));
+            // Add more detailed debugging
+            $debug_info = array(
+                'artist' => $artist,
+                'checked_paths' => $this->get_debug_paths($artist),
+                'file_exists_checks' => array()
+            );
+            
+            // Check if the file actually exists at each path
+            $all_paths = array();
+            if (defined('URBAN_TOP_40_PLUGIN_DIR')) {
+                $all_paths[] = URBAN_TOP_40_PLUGIN_DIR . 'assets/artistcharts/' . $artist . '.ts';
+            }
+            $all_paths[] = plugin_dir_path(dirname(dirname(__FILE__))) . 'assets/artistcharts/' . $artist . '.ts';
+            $all_paths[] = dirname(__FILE__) . '/../../assets/artistcharts/' . $artist . '.ts';
+            
+            if (defined('WP_CONTENT_DIR')) {
+                $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+                foreach ($possible_plugin_dirs as $plugin_dir) {
+                    $all_paths[] = WP_CONTENT_DIR . '/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+                }
+            }
+            
+            if (defined('ABSPATH')) {
+                $possible_plugin_dirs = array('urban-top-40', 'urbantop40', 'UrbanTop40');
+                foreach ($possible_plugin_dirs as $plugin_dir) {
+                    $all_paths[] = ABSPATH . 'wp-content/plugins/' . $plugin_dir . '/assets/artistcharts/' . $artist . '.ts';
+                }
+            }
+            
+            foreach ($all_paths as $path) {
+                $debug_info['file_exists_checks'][$path] = array(
+                    'exists' => file_exists($path),
+                    'is_readable' => is_readable($path),
+                    'size' => file_exists($path) ? filesize($path) : 'N/A',
+                    'permissions' => file_exists($path) ? substr(sprintf('%o', fileperms($path)), -4) : 'N/A'
+                );
+            }
+            
+            wp_send_json_error('Artist data file not found. Debug info: ' . json_encode($debug_info));
         }
         
         // Read and parse the TypeScript file
