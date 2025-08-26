@@ -1,0 +1,27 @@
+/* Urban Top 40 Global CSS */
+
+/* Global styling for Elementor video elements */
+.is-type-video {
+    border-radius: 5px !important;
+    overflow: hidden !important;
+}
+
+/* Target the iframe inside the video container */
+.is-type-video iframe,
+.is-type-video video,
+.is-type-video embed,
+.is-type-video object {
+    border-radius: 5px !important;
+}
+
+/* Additional targeting for WordPress block embeds */
+.wp-block-embed.is-type-video iframe {
+    border-radius: 5px !important;
+}
+
+/* Target Elementor video widgets */
+.elementor-widget-video .is-type-video iframe {
+    border-radius: 5px !important;
+}
+
+/* Additional global styles can be added here */
