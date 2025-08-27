@@ -161,9 +161,9 @@
             
             // Legend is now handled by sidebar
             
-            // Add fallback content if no lines were drawn
-            if (chartContent.find('.chart-area').length === 0) {
-                console.log('No song lines were drawn, adding fallback content');
+            // Add fallback content if no chart was created
+            if (chartContent.find('.chart-main-area').length === 0) {
+                console.log('No chart area was created, adding fallback content');
                 this.addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth);
             }
         }
@@ -175,8 +175,8 @@
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
                 const label = $(`<div class="y-axis-label">${position}</div>`);
-                // Corrected: 1 at top (0%), 100 at bottom (100%)
-                const yPos = (position / 100) * 100;
+                // Fixed: 1 at top (0%), 100 at bottom (100%)
+                const yPos = ((100 - position) / 100) * 100;
                 label.css('top', yPos + '%');
                 yAxisLabels.append(label);
             });
@@ -305,8 +305,8 @@
             // Horizontal grid lines for chart positions
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
-                // Corrected: 1 at top (0), 100 at bottom (chartHeight)
-                const yPos = (position / 100) * chartHeight;
+                // Fixed: 1 at top (0), 100 at bottom (chartHeight)
+                const yPos = ((100 - position) / 100) * chartHeight;
                 const line = $('<div class="grid-line horizontal"></div>');
                 line.css({
                     'position': 'absolute',
@@ -630,7 +630,7 @@
                                 },
                                 ticks: {
                                     color: 'rgba(255, 255, 255, 0.7)',
-                                    reverse: false, // 1 at top, 100 at bottom
+                                    reverse: true, // 1 at top, 100 at bottom
                                     callback: function(value) {
                                         return value;
                                     }
@@ -665,6 +665,7 @@
                 });
                 
                 console.log('Chart.js chart created successfully');
+                this.chartInstance = chart; // Store the chart instance
                 
             } catch (error) {
                 console.error('Error creating Chart.js chart:', error);
