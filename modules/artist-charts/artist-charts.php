@@ -48,7 +48,6 @@ class UrbanTop40_Artist_Charts {
     public function artist_chart_shortcode($atts) {
         $atts = shortcode_atts(array(
             'artist' => '',
-            'height' => '400',
             'width' => '100%',
             'show_legend' => 'true',
             'chart_type' => 'line' // line, area, bar
