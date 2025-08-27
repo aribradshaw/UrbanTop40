@@ -650,7 +650,7 @@
                                 },
                                 ticks: {
                                     color: 'rgba(255, 255, 255, 0.7)',
-                                    reverse: true, // 1 at top, 100 at bottom
+                                    reverse: false, // 1 at top, 100 at bottom (NO REVERSE)
                                     callback: function(value) {
                                         return value;
                                     }
