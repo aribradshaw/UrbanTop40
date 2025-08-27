@@ -617,12 +617,10 @@
     display: block;
     max-width: 100%;
     height: auto;
-    min-height: 400px;
 }
 
 /* Ensure chart canvas has proper dimensions */
 .chart-wrapper canvas {
     width: 100% !important;
-    height: 400px !important;
     max-height: 500px;
 }
