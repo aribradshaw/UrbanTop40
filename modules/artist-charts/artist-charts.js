@@ -139,7 +139,7 @@
             const chartHeight = parseInt(this.height) || 400;
             const weekCount = chartData.weeks.length;
             // Use more reasonable width calculation to avoid excessive empty space
-            const chartWidth = Math.min(800, Math.max(400, weekCount * 4));
+            const chartWidth = Math.min(600, Math.max(300, weekCount * 2));
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
@@ -148,7 +148,9 @@
                 'min-width': (chartWidth + 290) + 'px',
                 'max-width': (chartWidth + 290) + 'px',
                 'height': chartHeight + 'px',
-                'position': 'relative'
+                'position': 'relative',
+                'overflow-x': 'auto',
+                'overflow-y': 'hidden'
             });
             
             // Add grid lines
