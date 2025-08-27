@@ -115,7 +115,7 @@ class UrbanTop40 {
         new UrbanTop40_Spotify_Playlists();
         new UrbanTop40_Social_Links();
         new UrbanTop40_Admin_Sidebar();
-        new UrbanTop40_Artist_Charts();
+        // Note: Artist Charts module is self-initializing
     }
     
     /**

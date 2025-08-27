@@ -1,1011 +1,304 @@
 /**
- * Artist Charts Module JavaScript
+ * Artist Charts JavaScript
  * 
- * Handles chart rendering, data loading, and interactive functionality
+ * Handles chart visualization for artist Billboard chart history
  */
 
 (function($) {
     'use strict';
-
-    class ArtistChart {
+    
+    class ArtistCharts {
         constructor(container) {
             this.container = container;
             this.artist = container.data('artist');
-            this.height = container.data('height') || 600;
-            this.width = container.data('width') || '100%';
-            this.showLegend = container.data('show-legend') === 'true';
-            this.chartType = container.data('chart-type') || 'line';
-            
             this.chartData = null;
-            this.tooltip = null;
-            
-            // Check if required scripts are loaded
-            this.checkScriptsLoaded();
+            this.chart = null;
+            this.zoomLevel = 1;
             
             this.init();
         }
         
         init() {
-            this.createTooltip();
-            this.loadChartData();
+            this.loadArtistData();
+            this.bindEvents();
         }
         
-        checkScriptsLoaded() {
-            console.log('Checking if required scripts are loaded...');
-            console.log('jQuery available:', typeof $ !== 'undefined');
-            console.log('Chart.js available:', typeof Chart !== 'undefined');
-            console.log('Chart.js zoom plugin available:', typeof ChartZoom !== 'undefined');
-            
-            // Check if scripts are in the DOM
-            console.log('Chart.js script tag found:', document.querySelector('script[src*="chart.js"]') !== null);
-            console.log('Chart.js zoom script tag found:', document.querySelector('script[src*="chartjs-plugin-zoom"]') !== null);
-            
-            // Check window object
-            console.log('window.Chart:', window.Chart);
-            console.log('window.ChartZoom:', window.ChartZoom);
-            
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js is not loaded! This will cause the chart to fail.');
-                console.error('Check if the script is being enqueued properly in PHP.');
-                console.error('Script loading order may be incorrect.');
-            }
-        }
-        
-        waitForChartJs(callback, maxAttempts = 100) {
-            console.log('Waiting for Chart.js to load...');
-            
-            if (typeof Chart !== 'undefined') {
-                console.log('Chart.js is already loaded, executing callback immediately');
-                callback();
-                return;
-            }
-            
-            // Try to manually load Chart.js if it's not available after 10 attempts
-            let attempts = 0;
-            const checkInterval = setInterval(() => {
-                attempts++;
-                console.log(`Chart.js loading attempt ${attempts}/${maxAttempts} - Chart available: ${typeof Chart !== 'undefined'}`);
-                
-                // Check if scripts are in DOM
-                const chartScript = document.querySelector('script[src*="chart.js"]');
-                const zoomScript = document.querySelector('script[src*="chartjs-plugin-zoom"]');
-                console.log('Scripts in DOM:', { chartScript: !!chartScript, zoomScript: !!zoomScript });
-                
-                if (typeof Chart !== 'undefined') {
-                    console.log('Chart.js loaded successfully!');
-                    clearInterval(checkInterval);
-                    callback();
-                } else if (attempts === 10) {
-                    // Try manual loading after 10 attempts
-                    console.log('Attempting to manually load Chart.js...');
-                    this.manuallyLoadChartJs(callback);
-                } else if (attempts >= maxAttempts) {
-                    console.error('Chart.js failed to load after maximum attempts');
-                    clearInterval(checkInterval);
-                    // Show detailed error
-                    this.showChartJsError();
-                }
-            }, 200); // Check every 200ms instead of 100ms
-        }
-        
-        manuallyLoadChartJs(callback) {
-            console.log('Manually loading Chart.js from CDN...');
-            
-            // Load Chart.js
-            const chartScript = document.createElement('script');
-            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
-            chartScript.onload = () => {
-                console.log('Chart.js manually loaded successfully!');
-                
-                // Load zoom plugin
-                const zoomScript = document.createElement('script');
-                zoomScript.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js';
-                zoomScript.onload = () => {
-                    console.log('Chart.js zoom plugin manually loaded successfully!');
-                    callback();
-                };
-                zoomScript.onerror = () => {
-                    console.error('Failed to manually load zoom plugin');
-                    callback(); // Continue without zoom plugin
-                };
-                document.head.appendChild(zoomScript);
-            };
-            chartScript.onerror = () => {
-                console.error('Failed to manually load Chart.js');
-                this.showChartJsError();
-            };
-            document.head.appendChild(chartScript);
-        }
-        
-        showChartJsError() {
-            console.error('Chart.js loading failed - showing detailed error message');
-            
-            // Find the chart container and show a helpful error
-            const chartContainer = this.container.find('.chart-main-area');
-            if (chartContainer.length > 0) {
-                chartContainer.html(`
-                    <div style="padding: 20px; text-align: center; color: rgba(255, 255, 255, 0.8);">
-                        <h3>Chart.js Loading Failed</h3>
-                        <p>The chart library failed to load. This could be due to:</p>
-                        <ul style="text-align: left; display: inline-block; margin: 10px 0;">
-                            <li>Network connectivity issues</li>
-                            <li>CDN blocking or rate limiting</li>
-                            <li>Script loading order problems</li>
-                            <li>Browser security restrictions</li>
-                        </ul>
-                        <p><strong>Please refresh the page and try again.</strong></p>
-                        <p><em>If the problem persists, check the browser console for detailed error messages.</em></p>
-                    </div>
-                `);
-            }
-        }
-        
-        createTooltip() {
-            this.tooltip = $('<div class="chart-tooltip"></div>');
-            $('body').append(this.tooltip);
-        }
-        
-        loadChartData() {
-            const self = this;
-            
-            console.log('Loading chart data for artist:', this.artist);
-            
-            $.ajax({
-                url: urbanTop40Charts.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'get_artist_chart_data',
-                    artist: this.artist,
-                    nonce: urbanTop40Charts.nonce
-                },
-                success: function(response) {
-                    console.log('AJAX response:', response);
-                    if (response.success) {
-                        self.chartData = response.data;
-                        self.renderChart();
-                    } else {
-                        self.showError(response.data || 'Failed to load chart data');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX error:', { xhr, status, error });
-                    self.showError('Network error occurred while loading chart data');
-                }
+        bindEvents() {
+            // Zoom controls
+            this.container.on('wheel', '.chart-area', (e) => {
+                e.preventDefault();
+                this.handleZoom(e);
             });
+            
+            // Error retry
+            this.container.on('click', '.error-retry', () => {
+                this.loadArtistData();
+            });
+        }
+        
+        async loadArtistData() {
+            this.showLoading();
+            this.hideError();
+            this.hideContent();
+            
+            try {
+                const response = await $.ajax({
+                    url: artistChartsAjax.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_artist_charts',
+                        artist: this.artist,
+                        nonce: artistChartsAjax.nonce
+                    }
+                });
+                
+                if (response.success) {
+                    this.chartData = response.data;
+                    this.renderChart();
+                    this.updateStats();
+                    this.showContent();
+                } else {
+                    throw new Error(response.data);
+                }
+            } catch (error) {
+                console.error('Error loading artist data:', error);
+                this.showError(error.message || 'Failed to load artist data');
+            } finally {
+                this.hideLoading();
+            }
         }
         
         renderChart() {
-            console.log('Rendering chart with data:', this.chartData);
+            if (!this.chartData) return;
             
-            if (!this.chartData || !this.chartData.songs) {
-                this.showError('No chart data available');
-                return;
-            }
+            const chartContainer = this.container.find('#chart-container');
+            chartContainer.empty();
             
-            // Hide loading, show chart
-            this.container.find('.chart-loading').hide();
-            this.container.find('.chart-container').show().addClass('fade-in');
+            // Create canvas for Chart.js
+            const canvas = $('<canvas id="artist-chart-canvas"></canvas>');
+            chartContainer.append(canvas);
             
-            // Set artist name with chart type
-            this.container.find('.artist-name').text(`${this.chartData.name} - All Songs Chart History`);
+            const ctx = canvas[0].getContext('2d');
             
-            // Render stats
-            this.renderStats();
+            // Prepare data for Chart.js
+            const chartData = this.prepareChartData();
             
-            // Render chart
-            this.renderChartContent();
-            
-            // Add event listeners
-            this.addEventListeners();
-        }
-        
-        renderStats() {
-            const stats = this.container.find('.chart-stats');
-            stats.empty();
-            
-            // Total songs
-            stats.append(`
-                <div class="stat-item">
-                    <span class="stat-value">${this.chartData.totalSongs}</span>
-                    <span class="stat-label">Total Songs</span>
-                </div>
-            `);
-            
-            // Number ones
-            const numberOnes = this.chartData.songs.filter(song => song.peakPosition === 1).length;
-            stats.append(`
-                <div class="stat-item">
-                    <span class="stat-value">${numberOnes}</span>
-                    <span class="stat-label">Number Ones</span>
-                </div>
-            `);
-            
-            // Calculate total weeks from all chart history
-            const allWeeks = new Set();
-            this.chartData.songs.forEach(song => {
-                song.chartHistory.forEach(entry => {
-                    allWeeks.add(entry.date);
-                });
-            });
-            
-            stats.append(`
-                <div class="stat-item">
-                    <span class="stat-value">${allWeeks.size}</span>
-                    <span class="stat-label">Total Weeks</span>
-                </div>
-            `);
-        }
-        
-        renderChartContent() {
-            const chartContent = this.container.find('.chart-content');
-            chartContent.empty();
-            
-            console.log('Rendering chart content with songs:', this.chartData.songs);
-            
-            // Process chart data to get all unique weeks and song trajectories
-            const chartData = this.processChartData();
-            
-            // Calculate chart dimensions - more height for better spacing
-            const chartHeight = parseInt(this.height) || 600; // Increased from 400 to 600
-            const weekCount = chartData.weeks.length;
-            // Use reasonable width - not forcing 1250px
-            const chartWidth = Math.max(800, weekCount * 25); // Increased from 20px to 25px per week
-            
-            console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
-            
-            // Set chart dimensions - reasonable width that won't force 1250px
-            const contentWidth = Math.min(1200, Math.max(800, chartWidth + 290)); // Cap at 1200px
-            chartContent.css({
-                'min-width': contentWidth + 'px',
-                'max-width': contentWidth + 'px',
-                'height': chartHeight + 'px',
-                'position': 'relative'
-            });
-            
-            // Chart.js will handle all axis rendering automatically
-            
-            // Draw song lines
-            this.drawSongLines(chartContent, chartData, chartHeight, chartWidth);
-            
-            // Legend is now handled by sidebar
-            
-            // Add fallback content if no chart was created
-            if (chartContent.find('.chart-main-area').length === 0) {
-                console.log('No chart area was created, adding fallback content');
-                this.addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth);
-            }
-        }
-        
-        // Y-axis labels are now handled by Chart.js automatically
-        
-        processChartData() {
-            console.log('Processing chart data...');
-            console.log('Original songs data:', this.chartData.songs);
-            
-            const allWeeks = new Set();
-            const songTrajectories = [];
-            
-            // Collect all unique weeks and create song trajectories
-            this.chartData.songs.forEach(song => {
-                console.log(`Processing song: ${song.song}`);
-                console.log(`Chart history:`, song.chartHistory);
-                
-                const trajectory = {
-                    song: song.song,
-                    color: this.getSongColor(song.song),
-                    data: []
-                };
-                
-                song.chartHistory.forEach(entry => {
-                    allWeeks.add(entry.date);
-                    trajectory.data.push({
-                        date: entry.date,
-                        position: entry.position,
-                        week: entry.weeksOnChart
-                    });
-                });
-                
-                console.log(`Created trajectory for ${song.song}:`, trajectory);
-                songTrajectories.push(trajectory);
-            });
-            
-            // Sort weeks chronologically
-            const sortedWeeks = Array.from(allWeeks).sort();
-            console.log('All unique weeks:', sortedWeeks);
-            
-            // Smart gap detection and labeling
-            const labeledWeeks = this.smartWeekLabeling(sortedWeeks);
-            console.log('Labeled weeks:', labeledWeeks);
-            
-            const result = {
-                weeks: labeledWeeks,
-                songs: songTrajectories
-            };
-            
-            console.log('Final processed data:', result);
-            return result;
-        }
-        
-        getSongColor(songName) {
-            // Generate consistent colors for each song
-            const colors = [
-                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-                '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-                '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
-            ];
-            
-            let hash = 0;
-            for (let i = 0; i < songName.length; i++) {
-                hash = songName.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            hash = Math.abs(hash);
-            
-            return colors[hash % colors.length];
-        }
-        
-        smartWeekLabeling(weeks) {
-            // Show every single week on the X-axis
-            const labeledWeeks = [];
-            
-            weeks.forEach((week, index) => {
-                let label = '';
-                let showLabel = true;
-                
-                if (index > 0) {
-                    // Check for gaps and add gap labels
-                    const prevWeek = new Date(weeks[index - 1]);
-                    const currentWeek = new Date(week);
-                    const weekDiff = this.getWeekDifference(prevWeek, currentWeek);
-                    
-                    if (weekDiff > 1) {
-                        label = `${weekDiff} week gap`;
-                        showLabel = true;
-                    } else {
-                        label = this.formatWeekLabel(week);
-                        showLabel = true; // Show label for every week
-                    }
-                } else {
-                    label = this.formatWeekLabel(week);
-                    showLabel = true;
-                }
-                
-                labeledWeeks.push({
-                    date: week,
-                    label: label,
-                    showLabel: showLabel
-                });
-            });
-            
-            return labeledWeeks;
-        }
-        
-        formatWeekLabel(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        }
-        
-        getWeekDifference(date1, date2) {
-            const oneWeek = 7 * 24 * 60 * 60 * 1000;
-            return Math.round(Math.abs((date2 - date1) / oneWeek));
-        }
-        
-        // Grid lines are now handled by Chart.js automatically
-        
-        // X-axis labels are now handled by Chart.js automatically
-        
-        drawSongLines(chartContent, chartData, chartHeight, chartWidth) {
-            console.log('Drawing song lines with Chart.js approach...');
-            console.log('Chart data:', chartData);
-            
-            // Calculate week count from chart data
-            const weekCount = chartData.weeks ? chartData.weeks.length : chartData.songs.reduce((max, song) => {
-                return Math.max(max, song.data.length);
-            }, 0);
-            
-            console.log('Week count calculated:', weekCount);
-            
-            // Create main chart area - full width
-            const chartArea = $('<div class="chart-main-area"></div>');
-            chartArea.css({
-                'width': '100%',
-                'position': 'relative',
-                'overflow': 'hidden',
-                'min-width': '600px',
-                'min-height': '400px' // Ensure minimum chart height
-            });
-            
-            // Create scrollable container for proper horizontal scrolling
-            const scrollContainer = $('<div class="chart-scroll-container"></div>');
-            scrollContainer.css({
-                'width': '100%',
-                'overflow-x': 'auto',
-                'overflow-y': 'hidden',
-                'position': 'relative',
-                'min-width': '100%'
-            });
-            
-            chartArea.append(scrollContainer);
-            
-            // Create canvas with better sizing and spacing
-            const canvas = $('<canvas></canvas>');
-            const actualChartWidth = Math.max(1000, weekCount * 30); // More space per week
-            const actualChartHeight = Math.max(600, Math.floor(chartHeight * 0.8)); // Increased height to show full 1-100 range
-            
-            canvas.attr('width', actualChartWidth);
-            canvas.attr('height', actualChartHeight);
-            canvas.css({
-                'width': actualChartWidth + 'px',
-                'height': actualChartHeight + 'px',
-                'display': 'block',
-                'margin': '20px'
-            });
-            
-            console.log('Canvas created with dimensions:', { width: actualChartWidth, height: Math.floor(chartHeight * 0.67) });
-            
-            scrollContainer.append(canvas);
-            
-            // Add zoom instructions
-            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll wheel to zoom in/out horizontally • Drag to pan left/right • Y-axis stays fixed at 1-100</div>');
-            zoomInstructions.css({
-                'text-align': 'center',
-                'color': 'rgba(255, 255, 255, 0.8)',
-                'font-size': '14px',
-                'margin-top': '10px',
-                'padding': '10px',
-                'background': 'rgba(0, 0, 0, 0.2)',
-                'border-radius': '5px'
-            });
-            chartArea.append(zoomInstructions);
-            
-            // Prepare data for Chart.js with proper gap handling
-            const chartJsData = this.prepareChartJsData(chartData);
-            console.log('Chart.js data prepared with gaps:', chartJsData);
-            console.log('Chart.js data structure:', {
-                labelsCount: chartJsData.labels.length,
-                datasetsCount: chartJsData.datasets.length,
-                firstDataset: chartJsData.datasets[0],
-                sampleLabels: chartJsData.labels.slice(0, 5)
-            });
-            
-
-            
-
-            
-            // Ensure Chart.js is loaded before creating chart
-            this.waitForChartJs(() => {
-                console.log('Chart.js loaded, creating chart...');
-                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, actualChartHeight);
-            });
-            
-            // Create song list at the bottom - 20% of container height
-            const songListArea = $('<div class="chart-song-list-area"></div>');
-            songListArea.css({
-                'width': '100%',
-                'height': Math.floor(chartHeight * 0.2) + 'px', // Reduced to 20% to give more space to chart
-                'background': 'rgba(0, 0, 0, 0.1)',
-                'border-top': '1px solid rgba(255, 255, 255, 0.2)',
-                'overflow-y': 'auto',
-                'padding': '20px',
-                'box-sizing': 'border-box'
-            });
-            
-            // Add song list to bottom area
-            this.createSongList(songListArea, chartData);
-            
-            // Add chart area and song list area
-            chartContent.append(chartArea);
-            chartContent.append(songListArea);
-            console.log('Finished drawing song lines with Chart.js and bottom song list');
-        }
-        
-        createSongList(songListArea, chartData) {
-            const title = $('<h3 class="song-list-title">Songs</h3>');
-            title.css({
-                'color': 'rgba(255, 255, 255, 0.9)',
-                'margin-bottom': '20px',
-                'font-size': '18px',
-                'border-bottom': '1px solid rgba(255, 255, 255, 0.2)',
-                'padding-bottom': '10px',
-                'text-align': 'center'
-            });
-            
-            songListArea.append(title);
-            
-            // Create a grid container for songs
-            const songGrid = $('<div class="song-grid"></div>');
-            songGrid.css({
-                'display': 'grid',
-                'grid-template-columns': 'repeat(auto-fill, minmax(150px, 1fr))',
-                'gap': '8px',
-                'max-height': 'calc(100% - 50px)', // Account for title height
-                'overflow-y': 'auto'
-            });
-            
-            chartData.songs.forEach((song, index) => {
-                const colors = [
-                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
-                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
-                ];
-                
-                const songItem = $('<div class="song-item"></div>');
-                songItem.css({
-                    'padding': '8px',
-                    'background': 'rgba(255, 255, 255, 0.05)',
-                    'border-radius': '6px',
-                    'border-left': '3px solid ' + colors[index % colors.length],
-                    'cursor': 'pointer',
-                    'transition': 'all 0.2s ease',
-                    'min-height': '60px',
-                    'display': 'flex',
-                    'flex-direction': 'column',
-                    'justify-content': 'space-between'
-                });
-                
-                songItem.hover(
-                    function() {
-                        $(this).css('background', 'rgba(255, 255, 255, 0.1)');
-                        $(this).css('transform', 'translateY(-2px)');
+            // Create the chart
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     },
-                    function() {
-                        $(this).css('background', 'rgba(255, 255, 255, 0.05)');
-                        $(this).css('transform', 'translateY(0)');
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: (tooltipItems) => {
+                                    return `Week of ${tooltipItems[0].label}`;
+                                },
+                                label: (context) => {
+                                    const songName = context.dataset.label;
+                                    const position = 101 - context.parsed.y;
+                                    return `${songName}: #${position}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'week',
+                                displayFormats: {
+                                    week: 'MMM dd, yyyy'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 45
+                            }
+                        },
+                        y: {
+                            reverse: true,
+                            min: 1,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                callback: (value) => `#${value}`
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 3,
+                            hoverRadius: 5
+                        },
+                        line: {
+                            tension: 0.1
+                        }
                     }
-                );
-                
-                const songName = $('<div class="song-name"></div>');
-                songName.css({
-                    'color': 'rgba(255, 255, 255, 0.9)',
-                    'font-weight': 'bold',
-                    'margin-bottom': '4px',
-                    'font-size': '12px',
-                    'line-height': '1.2',
-                    'overflow': 'hidden',
-                    'text-overflow': 'ellipsis',
-                    'white-space': 'nowrap'
-                });
-                songName.text(song.song);
-                
-                const songStats = $('<div class="song-stats"></div>');
-                songStats.css({
-                    'color': 'rgba(255, 255, 255, 0.7)',
-                    'font-size': '10px',
-                    'line-height': '1.1',
-                    'margin-top': 'auto'
-                });
-                
-                // Use song.data from the processed trajectory structure
-                const peakPosition = Math.min(...song.data.map(p => p.position));
-                const weeksOnChart = song.data.length;
-                songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
-                
-                songItem.append(songName);
-                songItem.append(songStats);
-                songGrid.append(songItem);
+                }
             });
             
-            songListArea.append(songGrid);
+            // Render song legend
+            this.renderSongLegend();
         }
         
-        prepareChartJsData(chartData) {
-            // Get all unique dates and sort them
+        prepareChartData() {
+            if (!this.chartData || !this.chartData.songs) return { datasets: [] };
+            
+            // Get all unique dates
             const allDates = new Set();
-            chartData.songs.forEach(song => {
-                song.data.forEach(point => {
-                    allDates.add(point.date);
+            this.chartData.songs.forEach(song => {
+                song.chartHistory.forEach(entry => {
+                    allDates.add(entry.date);
                 });
             });
             
             const sortedDates = Array.from(allDates).sort();
             
-            // Create datasets for each song with proper gap handling
-            const datasets = chartData.songs.map((song, index) => {
+            // Create datasets for each song
+            const datasets = this.chartData.songs.map((song, index) => {
                 const colors = [
                     '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
-                // Create data array with null values for gaps
                 const data = sortedDates.map(date => {
-                    const point = song.data.find(p => p.date === date);
-                    return point ? point.position : null;
-                });
+                    const entry = song.chartHistory.find(e => e.date === date);
+                    return entry ? {
+                        x: new Date(date),
+                        y: 101 - entry.position
+                    } : null;
+                }).filter(point => point !== null);
                 
                 return {
                     label: song.song,
                     data: data,
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length],
-                    borderWidth: 4,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: colors[index % colors.length],
-                    pointBorderColor: 'rgba(255, 255, 255, 0.8)',
-                    pointBorderWidth: 2,
+                    borderWidth: 2,
                     fill: false,
-                    tension: 0.2,
-                    spanGaps: false // Don't connect across gaps
+                    tension: 0.1
                 };
             });
             
-            // Create labels with actual week dates instead of index numbers
-            const labels = sortedDates.map((date, index) => {
-                if (index === 0) return this.formatWeekLabel(date);
+            return { datasets };
+        }
+        
+        renderSongLegend() {
+            if (!this.chartData || !this.chartData.songs) return;
+            
+            const legendContainer = this.container.find('#song-legend');
+            legendContainer.empty();
+            
+            const colors = [
+                '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+            ];
+            
+            this.chartData.songs.forEach((song, index) => {
+                const color = colors[index % colors.length];
+                const peakPosition = Math.min(...song.chartHistory.map(e => e.position));
                 
-                const prevDate = new Date(sortedDates[index - 1]);
-                const currentDate = new Date(date);
-                const daysDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+                const legendItem = $(`
+                    <div class="song-legend-item" style="border-left-color: ${color}">
+                        <div class="song-legend-name">${song.song}</div>
+                        <div class="song-legend-details">
+                            Peak Rank: #${peakPosition}
+                        </div>
+                        <div class="song-legend-details">
+                            Weeks On Chart: ${song.chartHistory.length}
+                        </div>
+                    </div>
+                `);
                 
-                // If gap is more than 7 days, add gap indicator
-                if (daysDiff > 7) {
-                    const weeksGap = Math.round(daysDiff / 7);
-                    return `Gap (${weeksGap} weeks)`;
-                }
-                
-                return this.formatWeekLabel(date);
+                legendContainer.append(legendItem);
             });
-            
-            return {
-                labels: labels,
-                datasets: datasets
-            };
         }
         
-        createChartJsChart(canvas, data, width, height) {
-            // Debug Chart.js availability
-            console.log('Chart.js availability check:');
-            console.log('typeof Chart:', typeof Chart);
-            console.log('window.Chart:', window.Chart);
-            console.log('Chart object:', Chart);
+        updateStats() {
+            if (!this.chartData) return;
             
-            // Check if Chart.js is available
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js is not loaded - scripts may not be loading properly');
-                this.createSimpleChartFallback(canvas, data);
-                return;
-            }
+            this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
             
-            try {
-                const ctx = canvas.getContext('2d');
-                
-                // SIMPLIFIED Chart.js configuration to avoid errors
-                const chart = new Chart(ctx, {
-                    type: 'line',
-                    data: data,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                display: true,
-                                ticks: {
-                                    color: 'rgba(255, 255, 255, 0.9)',
-                                    maxRotation: 0,
-                                    minRotation: 0,
-                                    font: {
-                                        size: 16,
-                                        weight: '600'
-                                    },
-                                    padding: 16,
-                                    maxTicksLimit: 20,
-                                    callback: function(value, index, values) {
-                                        // Show more labels for better readability
-                                        return index % 3 === 0 ? value : '';
-                                    }
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.25)',
-                                    lineWidth: 1
-                                }
-                            },
-                            y: {
-                                display: true,
-                                title: {
-                                    display: false
-                                },
-                                ticks: {
-                                    color: 'rgba(255, 255, 255, 0.9)',
-                                    reverse: true, // 1 at top, 100 at bottom
-                                    font: {
-                                        size: 16,
-                                        weight: '600'
-                                    },
-                                    padding: 12,
-                                    callback: function(value, index, values) {
-                                        // Show more positions for better readability
-                                        if ([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].includes(value)) {
-                                            return value;
-                                        }
-                                        return '';
-                                    }
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.25)',
-                                    lineWidth: 1
-                                },
-                                min: 1,
-                                max: 100,
-                                beginAtZero: false
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'nearest',
-                                intersect: true,
-                                backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                                titleColor: 'rgba(255, 255, 255, 1)',
-                                bodyColor: 'rgba(255, 255, 255, 1)',
-                                borderColor: 'rgba(255, 255, 255, 0.4)',
-                                borderWidth: 2,
-                                titleFont: {
-                                    size: 16,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 14
-                                },
-                                padding: 16,
-                                cornerRadius: 10,
-                                displayColors: true,
-                                position: 'nearest',
-                                callbacks: {
-                                    title: function(context) {
-                                        return context[0].label;
-                                    },
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y;
-                                    }
-                                }
-                            },
-                            zoom: {
-                                wheel: {
-                                    enabled: true,
-                                    speed: 0.05
-                                },
-                                pinch: {
-                                    enabled: false
-                                },
-                                mode: 'x'
-                            },
-                            pan: {
-                                enabled: true,
-                                mode: 'x'
-                            },
-                            limits: {
-                                x: {
-                                    min: 'original',
-                                    max: 'original'
-                                },
-                                y: {
-                                    min: 1,
-                                    max: 100
-                                }
-                            }
-                        },
-                        interaction: {
-                            mode: 'nearest',
-                            axis: 'x',
-                            intersect: false
-                        },
-                        onZoom: function() {
-                            // Ensure Y-axis stays fixed at 1-100 after zoom
-                            this.scales.y.min = 1;
-                            this.scales.y.max = 100;
-                        },
-                        onPan: function() {
-                            // Ensure Y-axis stays fixed at 1-100 after pan
-                            this.scales.y.min = 1;
-                            this.scales.y.max = 100;
-                        }
-                    }
-                });
-                
-                console.log('Chart.js chart created successfully');
-                this.chartInstance = chart;
-                
-                // Set initial zoom level - start with reasonable zoom
-                setTimeout(() => {
-                    if (chart.zoom && chart.zoom.zoom) {
-                        try {
-                            chart.zoom.zoom({
-                                x: 1.5, // Start 1.5x zoomed in for better readability
-                                y: 1    // No vertical zoom
-                            });
-                        } catch (zoomError) {
-                            console.log('Zoom not available, continuing without initial zoom');
-                        }
-                    }
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error creating Chart.js chart:', error);
-                this.createSimpleChartFallback(canvas, data);
-            }
-        }
-        
-        createSimpleChartFallback(canvas, data) {
-            console.log('Creating simple chart fallback');
-            
-            const container = $(canvas).parent();
-            container.empty();
-            
-            const fallbackDiv = $('<div class="simple-chart-fallback"></div>');
-            fallbackDiv.css({
-                'padding': '20px',
-                'text-align': 'center',
-                'color': 'rgba(255, 255, 255, 0.8)'
-            });
-            
-            fallbackDiv.html(`
-                <h3>Chart Data</h3>
-                <p>${data.datasets.length} songs with chart history</p>
-                <p>${data.labels.length} unique weeks</p>
-                <p><em>Chart.js not available. Using fallback display.</em></p>
-            `);
-            
-            container.append(fallbackDiv);
-        }
-        
-
-        
-        addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth) {
-            console.log('Adding fallback chart content');
-            
-            const fallbackContainer = $('<div class="fallback-chart"></div>');
-            fallbackContainer.css({
-                'position': 'absolute',
-                'top': '0',
-                'left': '0',
-                'width': '100%',
-                'height': '100%',
-                'display': 'flex',
-                'align-items': 'center',
-                'justify-content': 'center',
-                'color': 'rgba(255, 255, 255, 0.7)',
-                'font-size': '1.2rem',
-                'text-align': 'center',
-                'padding': '2rem'
-            });
-            
-            // Show basic song information
-            let fallbackHtml = '<div>';
-            fallbackHtml += '<h3>Chart Data Loaded</h3>';
-            fallbackHtml += `<p>${chartData.songs.length} songs with chart history</p>`;
-            fallbackHtml += `<p>${chartData.weeks.length} unique weeks</p>`;
-            fallbackHtml += '<p><em>Line chart rendering issue detected. Check console for details.</em></p>';
-            fallbackHtml += '</div>';
-            
-            fallbackContainer.html(fallbackHtml);
-            chartContent.append(fallbackContainer);
-        }
-        
-        // Old bar chart methods removed - now using line chart
-        
-        addEventListeners() {
-            const self = this;
-            
-            // Line chart hover events
-            this.container.on('mouseenter', 'circle', function(e) {
-                const circle = $(this);
-                const song = circle.data('song');
-                const position = circle.data('position');
-                const date = circle.data('date');
-                
-                self.showTooltip(e, {
-                    song: song,
-                    position: position,
-                    date: date
+            // Calculate total weeks
+            const allDates = new Set();
+            this.chartData.songs.forEach(song => {
+                song.chartHistory.forEach(entry => {
+                    allDates.add(entry.date);
                 });
             });
-            
-            this.container.on('mouseleave', 'circle', function() {
-                self.hideTooltip();
-            });
-            
-            // Line click events
-            this.container.on('click', 'path', function(e) {
-                const path = $(this);
-                const songName = path.closest('.song-line-container').find('circle').first().data('song');
-                
-                // Highlight the clicked line
-                self.container.find('path').removeClass('active');
-                path.addClass('active');
-                
-                console.log('Selected song:', songName);
-            });
-            
-            // Scroll events for smooth animations
-            this.container.find('.chart-scroll-container').on('scroll', function() {
-                // Add scroll-based animations if needed
-            });
+            const totalWeeks = allDates.size;
+            this.container.find('#week-count').text(`${totalWeeks} Weeks`);
         }
         
-        showTooltip(event, data) {
-            if (!this.tooltip) return;
+        handleZoom(e) {
+            const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+            this.zoomLevel = Math.max(0.5, Math.min(3, this.zoomLevel * delta));
             
-            const tooltipContent = `
-                <div class="tooltip-title">${data.song}</div>
-                <div class="tooltip-detail"><strong>Position:</strong> #${data.position}</div>
-                <div class="tooltip-detail"><strong>Date:</strong> ${data.date}</div>
-            `;
+            this.container.find('#zoom-level').text(`Zoom: ${Math.round(this.zoomLevel * 100)}%`);
             
-            this.tooltip.html(tooltipContent).addClass('show');
-            
-            // Position tooltip
-            const offset = this.container.offset();
-            const x = event.pageX - offset.left + 15;
-            const y = event.pageY - offset.top - this.tooltip.outerHeight() - 10;
-            
-            this.tooltip.css({
-                'left': offset.left + x + 'px',
-                'top': offset.top + y + 'px'
-            });
+            // Apply zoom to chart container
+            const chartArea = this.container.find('.chart-area');
+            chartArea.css('transform', `scale(${this.zoomLevel})`);
+            chartArea.css('transform-origin', 'top left');
         }
         
-        hideTooltip() {
-            if (this.tooltip) {
-                this.tooltip.removeClass('show');
-            }
+        showLoading() {
+            this.container.find('.artist-charts-loading').show();
+        }
+        
+        hideLoading() {
+            this.container.find('.artist-charts-loading').hide();
+        }
+        
+        showContent() {
+            this.container.find('.artist-charts-content').show();
+        }
+        
+        hideContent() {
+            this.container.find('.artist-charts-content').hide();
         }
         
         showError(message) {
-            this.container.find('.chart-loading').html(`
-                <div style="color: #ff6b6b; padding: 2rem;">
-                    <strong>Error:</strong> ${message}
-                </div>
-            `);
+            this.container.find('.error-message').text(message);
+            this.container.find('.artist-charts-error').show();
         }
         
-        destroy() {
-            if (this.tooltip) {
-                this.tooltip.remove();
-                this.tooltip = null;
-            }
-            
-            this.container.off('mouseenter mouseleave click', 'circle path');
-            this.container.find('.chart-scroll-container').off('scroll');
+        hideError() {
+            this.container.find('.artist-charts-error').hide();
         }
     }
     
-    // Initialize all components on the page
+    // Initialize artist charts when DOM is ready
     $(document).ready(function() {
-        // Initialize artist charts
-        $('.urban-top-40-artist-chart').each(function() {
-            new ArtistChart($(this));
-        });
+        // Check if Chart.js is available
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is required for artist charts to work');
+            return;
+        }
         
-        // Initialize artist stats
-        $('.urban-top-40-artist-stats').each(function() {
-            new ArtistStats($(this));
-        });
-        
-        // Initialize artist songs
-        $('.urban-top-40-artist-songs').each(function() {
-            new ArtistSongs($(this));
-        });
-    });
-    
-    // Re-initialize charts for dynamic content (like AJAX-loaded content)
-    $(document).on('urban-top-40-charts-ready', function() {
-        $('.urban-top-40-artist-chart:not(.initialized)').each(function() {
-            $(this).addClass('initialized');
-            new ArtistChart($(this));
-        });
-    });
-    
-    // Cleanup on page unload
-    $(window).on('beforeunload', function() {
-        $('.urban-top-40-artist-chart').each(function() {
-            const chart = $(this).data('artist-chart');
-            if (chart && typeof chart.destroy === 'function') {
-                chart.destroy();
-            }
+        $('.artist-charts-container').each(function() {
+            new ArtistCharts($(this));
         });
     });
     
