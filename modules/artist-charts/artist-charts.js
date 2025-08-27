@@ -11,7 +11,7 @@
         constructor(container) {
             this.container = container;
             this.artist = container.data('artist');
-            this.height = container.data('height') || 200;
+            this.height = container.data('height') || 600;
             this.width = container.data('width') || '100%';
             this.showLegend = container.data('show-legend') === 'true';
             this.chartType = container.data('chart-type') || 'line';
@@ -403,7 +403,7 @@
             
             // Calculate week count from chart data
             const weekCount = chartData.weeks ? chartData.weeks.length : chartData.songs.reduce((max, song) => {
-                return Math.max(max, song.chartHistory.length);
+                return Math.max(max, song.data.length);
             }, 0);
             
             console.log('Week count calculated:', weekCount);
@@ -478,6 +478,14 @@
                 sampleLabels: chartJsData.labels.slice(0, 5)
             });
             
+            // Debug: Check the processed chart data structure
+            console.log('Processed chart data structure:', {
+                weeksCount: chartData.weeks.length,
+                songsCount: chartData.songs.length,
+                firstSong: chartData.songs[0],
+                firstSongDataPoints: chartData.songs[0]?.data?.length
+            });
+            
 
             
             // Ensure Chart.js is loaded before creating chart
@@ -544,9 +552,9 @@
                     'font-size': '12px'
                 });
                 
-                // Use song.chartHistory from the actual data structure
-                const peakPosition = Math.min(...song.chartHistory.map(p => p.position));
-                const weeksOnChart = song.chartHistory.length;
+                // Use song.data from the processed trajectory structure
+                const peakPosition = Math.min(...song.data.map(p => p.position));
+                const weeksOnChart = song.data.length;
                 songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
                 
                 songItem.append(songName);
@@ -559,7 +567,7 @@
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
-                song.chartHistory.forEach(point => {
+                song.data.forEach(point => {
                     allDates.add(point.date);
                 });
             });
@@ -576,7 +584,7 @@
                 
                 // Create data array with null values for gaps
                 const data = sortedDates.map(date => {
-                    const point = song.chartHistory.find(p => p.date === date);
+                    const point = song.data.find(p => p.date === date);
                     return point ? point.position : null;
                 });
                 
