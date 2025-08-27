@@ -408,32 +408,14 @@
             
             console.log('Week count calculated:', weekCount);
             
-            // Create sidebar for song list - 1/4 of container width
-            const sidebar = $('<div class="chart-sidebar"></div>');
-            sidebar.css({
-                'width': '25%',
-                'float': 'left',
-                'padding': '20px',
-                'background': 'rgba(0, 0, 0, 0.1)',
-                'border-right': '1px solid rgba(255, 255, 255, 0.2)',
-                'height': chartHeight + 'px',
-                'min-height': '600px',
-                'overflow-y': 'auto',
-                'min-width': '250px'
-            });
-            
-            // Add song list to sidebar
-            this.createSongSidebar(sidebar, chartData);
-            
-            // Create main chart area - takes remaining width after sidebar
+            // Create main chart area - full width
             const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
-                'margin-left': '20px',
-                'width': 'calc(75% - 20px)',
+                'width': '100%',
                 'position': 'relative',
                 'overflow': 'hidden',
                 'min-width': '600px',
-                'min-height': chartHeight + 'px'
+                'min-height': Math.floor(chartHeight * 0.67) + 'px' // Chart takes 2/3 of height
             });
             
             // Create scrollable container for proper horizontal scrolling
@@ -452,20 +434,29 @@
             const canvas = $('<canvas></canvas>');
             const actualChartWidth = Math.max(1000, weekCount * 30); // More space per week
             canvas.attr('width', actualChartWidth);
-            canvas.attr('height', chartHeight);
+            canvas.attr('height', Math.floor(chartHeight * 0.67)); // Chart takes 2/3 of height
             canvas.css({
                 'width': actualChartWidth + 'px',
-                'height': chartHeight + 'px',
+                'height': Math.floor(chartHeight * 0.67) + 'px',
                 'display': 'block',
                 'margin': '20px'
             });
             
-            console.log('Canvas created with dimensions:', { width: actualChartWidth, height: chartHeight });
+            console.log('Canvas created with dimensions:', { width: actualChartWidth, height: Math.floor(chartHeight * 0.67) });
             
             scrollContainer.append(canvas);
             
             // Add zoom instructions
             const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll wheel to zoom in/out horizontally • Drag to pan left/right • Y-axis stays fixed at 1-100</div>');
+            zoomInstructions.css({
+                'text-align': 'center',
+                'color': 'rgba(255, 255, 255, 0.8)',
+                'font-size': '14px',
+                'margin-top': '10px',
+                'padding': '10px',
+                'background': 'rgba(0, 0, 0, 0.2)',
+                'border-radius': '5px'
+            });
             chartArea.append(zoomInstructions);
             
             // Prepare data for Chart.js with proper gap handling
@@ -491,26 +482,52 @@
             // Ensure Chart.js is loaded before creating chart
             this.waitForChartJs(() => {
                 console.log('Chart.js loaded, creating chart...');
-                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, chartHeight);
+                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, Math.floor(chartHeight * 0.67));
             });
             
-            // Add both sidebar and chart area
-            chartContent.append(sidebar);
+            // Create song list at the bottom - 1/3 of container height
+            const songListArea = $('<div class="chart-song-list-area"></div>');
+            songListArea.css({
+                'width': '100%',
+                'height': Math.floor(chartHeight * 0.33) + 'px',
+                'background': 'rgba(0, 0, 0, 0.1)',
+                'border-top': '1px solid rgba(255, 255, 255, 0.2)',
+                'overflow-y': 'auto',
+                'padding': '20px',
+                'box-sizing': 'border-box'
+            });
+            
+            // Add song list to bottom area
+            this.createSongList(songListArea, chartData);
+            
+            // Add chart area and song list area
             chartContent.append(chartArea);
-            console.log('Finished drawing song lines with Chart.js and sidebar');
+            chartContent.append(songListArea);
+            console.log('Finished drawing song lines with Chart.js and bottom song list');
         }
         
-        createSongSidebar(sidebar, chartData) {
-            const title = $('<h3 class="sidebar-title">Songs</h3>');
+        createSongList(songListArea, chartData) {
+            const title = $('<h3 class="song-list-title">Songs</h3>');
             title.css({
                 'color': 'rgba(255, 255, 255, 0.9)',
                 'margin-bottom': '20px',
                 'font-size': '18px',
                 'border-bottom': '1px solid rgba(255, 255, 255, 0.2)',
-                'padding-bottom': '10px'
+                'padding-bottom': '10px',
+                'text-align': 'center'
             });
             
-            sidebar.append(title);
+            songListArea.append(title);
+            
+            // Create a grid container for songs
+            const songGrid = $('<div class="song-grid"></div>');
+            songGrid.css({
+                'display': 'grid',
+                'grid-template-columns': 'repeat(auto-fill, minmax(200px, 1fr))',
+                'gap': '15px',
+                'max-height': 'calc(100% - 60px)', // Account for title height
+                'overflow-y': 'auto'
+            });
             
             chartData.songs.forEach((song, index) => {
                 const colors = [
@@ -520,21 +537,26 @@
                 
                 const songItem = $('<div class="song-item"></div>');
                 songItem.css({
-                    'padding': '10px',
-                    'margin-bottom': '10px',
+                    'padding': '12px',
                     'background': 'rgba(255, 255, 255, 0.05)',
-                    'border-radius': '5px',
+                    'border-radius': '8px',
                     'border-left': '4px solid ' + colors[index % colors.length],
                     'cursor': 'pointer',
-                    'transition': 'all 0.2s ease'
+                    'transition': 'all 0.2s ease',
+                    'min-height': '80px',
+                    'display': 'flex',
+                    'flex-direction': 'column',
+                    'justify-content': 'space-between'
                 });
                 
                 songItem.hover(
                     function() {
                         $(this).css('background', 'rgba(255, 255, 255, 0.1)');
+                        $(this).css('transform', 'translateY(-2px)');
                     },
                     function() {
                         $(this).css('background', 'rgba(255, 255, 255, 0.05)');
+                        $(this).css('transform', 'translateY(0)');
                     }
                 );
                 
@@ -542,14 +564,21 @@
                 songName.css({
                     'color': 'rgba(255, 255, 255, 0.9)',
                     'font-weight': 'bold',
-                    'margin-bottom': '5px'
+                    'margin-bottom': '8px',
+                    'font-size': '14px',
+                    'line-height': '1.3',
+                    'overflow': 'hidden',
+                    'text-overflow': 'ellipsis',
+                    'white-space': 'nowrap'
                 });
                 songName.text(song.song);
                 
                 const songStats = $('<div class="song-stats"></div>');
                 songStats.css({
                     'color': 'rgba(255, 255, 255, 0.7)',
-                    'font-size': '12px'
+                    'font-size': '12px',
+                    'line-height': '1.2',
+                    'margin-top': 'auto'
                 });
                 
                 // Use song.data from the processed trajectory structure
@@ -559,8 +588,10 @@
                 
                 songItem.append(songName);
                 songItem.append(songStats);
-                sidebar.append(songItem);
+                songGrid.append(songItem);
             });
+            
+            songListArea.append(songGrid);
         }
         
         prepareChartJsData(chartData) {
@@ -737,67 +768,65 @@
                                     }
                                 }
                             },
-                            // Temporarily disabled zoom plugin to fix chart display
-                            // zoom: {
-                            //     wheel: {
-                            //         enabled: true,
-                            //         speed: 0.05
-                            //     },
-                            //     pinch: {
-                            //         enabled: false
-                            //     },
-                            //     mode: 'x'
-                            // },
-                            // pan: {
-                            //     enabled: true,
-                            //     mode: 'x'
-                            // },
-                            // limits: {
-                            //     x: {
-                            //         min: 'original',
-                            //         max: 'original'
-                            //     },
-                            //     y: {
-                            //         min: 1,
-                            //         max: 100
-                            //     }
-                            // }
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    speed: 0.05
+                                },
+                                pinch: {
+                                    enabled: false
+                                },
+                                mode: 'x'
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x'
+                            },
+                            limits: {
+                                x: {
+                                    min: 'original',
+                                    max: 'original'
+                                },
+                                y: {
+                                    min: 1,
+                                    max: 100
+                                }
+                            }
                         },
                         interaction: {
                             mode: 'nearest',
                             axis: 'x',
                             intersect: false
                         },
-                        // Zoom event handlers temporarily disabled
-                        // onZoom: function() {
-                        //     // Ensure Y-axis stays fixed at 1-100 after zoom
-                        //     this.scales.y.min = 1;
-                        //     this.scales.y.max = 100;
-                        // },
-                        // onPan: function() {
-                        //     // Ensure Y-axis stays fixed at 1-100 after pan
-                        //     this.scales.y.max = 100;
-                        // }
+                        onZoom: function() {
+                            // Ensure Y-axis stays fixed at 1-100 after zoom
+                            this.scales.y.min = 1;
+                            this.scales.y.max = 100;
+                        },
+                        onPan: function() {
+                            // Ensure Y-axis stays fixed at 1-100 after pan
+                            this.scales.y.min = 1;
+                            this.scales.y.max = 100;
+                        }
                     }
                 });
                 
                 console.log('Chart.js chart created successfully');
                 this.chartInstance = chart;
                 
-                // Zoom functionality temporarily disabled
                 // Set initial zoom level - start with reasonable zoom
-                // setTimeout(() => {
-                //     if (chart.zoom && chart.zoom.zoom) {
-                //         try {
-                //             chart.zoom.zoom({
-                //                 x: 1.5, // Start 1.5x zoomed in for better readability
-                //                 y: 1    // No vertical zoom
-                //             });
-                //         } catch (zoomError) {
-                //             console.log('Zoom not available, continuing without initial zoom');
-                //         }
-                //     }
-                // }, 100);
+                setTimeout(() => {
+                    if (chart.zoom && chart.zoom.zoom) {
+                        try {
+                            chart.zoom.zoom({
+                                x: 1.5, // Start 1.5x zoomed in for better readability
+                                y: 1    // No vertical zoom
+                            });
+                        } catch (zoomError) {
+                            console.log('Zoom not available, continuing without initial zoom');
+                        }
+                    }
+                }, 100);
                 
             } catch (error) {
                 console.error('Error creating Chart.js chart:', error);
