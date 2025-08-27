@@ -5,6 +5,12 @@
 *.swp
 *.swo
 
+# Git and GitHub (NEVER deploy these!)
+.git/
+.github/
+.gitignore
+.gitattributes
+
 # Development files
 .env
 .env.local
@@ -32,14 +38,19 @@ Thumbs.db
 *.old
 *.orig
 
-# Test files (optional - remove if you want to deploy these)
+# Test files (never deploy these)
 test-*.php
 debug-*.php
+test-case-sensitivity.php
 
-# Documentation files (optional - remove if you want to deploy these)
+# Documentation files (never deploy these)
 README.md
 TROUBLESHOOTING.md
+DEPLOYMENT-SETUP.md
 *.md
+
+# Deployment config (never deploy this)
+deploy-config.json
 
 # Node modules (if you add any build tools later)
 node_modules/

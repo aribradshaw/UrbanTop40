@@ -455,11 +455,11 @@ class UrbanTop40_Artist_Charts {
             
             wp_send_json_success($artist_data);
         } else {
-            // If the first pattern fails, try a more flexible approach
-            // Look for any object assignment that might contain the artist data
-            $flexible_pattern = '/export const \w+\s*=\s*({[^}]+"name"\s*:\s*"[^"]*' . preg_quote(str_replace('_', ' ', $artist)) . '[^"]*"[^}]*});/s';
-            if (preg_match($flexible_pattern, $ts_content, $matches)) {
-                $json_data = $matches[1];
+            // Try to find export default with the data
+            $default_pattern = '/export const (\w+Data)\s*=\s*({.*?});\s*export default \1;/s';
+            if (preg_match($default_pattern, $ts_content, $matches)) {
+                $export_name = $matches[1];
+                $json_data = $matches[2];
                 
                 // Clean up the data to make it valid JSON
                 $json_data = preg_replace('/,\s*}/', '}', $json_data); // Remove trailing commas
@@ -469,12 +469,32 @@ class UrbanTop40_Artist_Charts {
                 $artist_data = json_decode($json_data, true);
                 
                 if ($artist_data === null) {
-                    wp_send_json_error('Unable to parse artist data with flexible pattern. JSON decode failed.');
+                    wp_send_json_error('Unable to parse artist data with default export. JSON decode failed. Export name found: ' . $export_name);
                 }
                 
                 wp_send_json_success($artist_data);
             } else {
-                wp_send_json_error('Unable to extract artist data from file. No matching export pattern found. File size: ' . $file_size . ' bytes. First 100 chars: ' . $first_100_chars . '... Last 100 chars: ...' . $last_100_chars);
+                // If the first patterns fail, try a more flexible approach
+                // Look for any object assignment that might contain the artist data
+                $flexible_pattern = '/export const \w+\s*=\s*({[^}]+"name"\s*:\s*"[^"]*' . preg_quote(str_replace('_', ' ', $artist)) . '[^"]*"[^}]*});/s';
+                if (preg_match($flexible_pattern, $ts_content, $matches)) {
+                    $json_data = $matches[1];
+                    
+                    // Clean up the data to make it valid JSON
+                    $json_data = preg_replace('/,\s*}/', '}', $json_data); // Remove trailing commas
+                    $json_data = preg_replace('/,\s*]/', ']', $json_data); // Remove trailing commas in arrays
+                    
+                    // Try to decode as JSON
+                    $artist_data = json_decode($json_data, true);
+                    
+                    if ($artist_data === null) {
+                        wp_send_json_error('Unable to parse artist data with flexible pattern. JSON decode failed.');
+                    }
+                    
+                    wp_send_json_success($artist_data);
+                } else {
+                    wp_send_json_error('Unable to extract artist data from file. No matching export pattern found. File size: ' . $file_size . ' bytes. First 100 chars: ' . $first_100_chars . '... Last 100 chars: ...' . $last_100_chars);
+                }
             }
         }
     }

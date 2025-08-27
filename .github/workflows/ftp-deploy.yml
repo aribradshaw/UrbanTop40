@@ -41,21 +41,28 @@ jobs:
         server-dir: /public_html/website_2b04249d/wp-content/plugins/urbantop40/
         local-dir: ./
         exclude: |
-          **/.git*
-          **/.github*
+          **/.git/**
+          **/.github/**
+          **/.gitignore
+          **/.gitattributes
           **/node_modules/**
           **/README.md
           **/TROUBLESHOOTING.md
+          **/DEPLOYMENT-SETUP.md
+          **/deploy-config.json
           **/test-*.php
+          **/debug-*.php
+          **/test-case-sensitivity.php
           **/.gitignore
           **/composer.*
           **/package.*
           **/yarn.lock
           **/package-lock.json
           **/.env*
-          **/.vscode*
+          **/.vscode/**
+          **/.idea/**
+          **/*.sublime-*
           **/*.log
-          **/debug-*.php
           
     - name: ✅ Deployment complete
       run: |
