@@ -143,9 +143,9 @@
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
-            // Set chart dimensions
+            // Set chart dimensions - account for sidebar
             chartContent.css({
-                'min-width': chartWidth + 'px',
+                'min-width': (chartWidth + 270) + 'px',
                 'height': chartHeight + 'px',
                 'position': 'relative'
             });
@@ -159,10 +159,7 @@
             // Draw song lines
             this.drawSongLines(chartContent, chartData, chartHeight, chartWidth);
             
-            // Add legend
-            if (this.showLegend) {
-                this.addLegend(chartContent, chartData.songs);
-            }
+            // Legend is now handled by sidebar
             
             // Add fallback content if no lines were drawn
             if (chartContent.find('.chart-area').length === 0) {
@@ -253,34 +250,35 @@
         }
         
         smartWeekLabeling(weeks) {
-            if (weeks.length <= 10) {
-                return weeks.map(week => ({ date: week, label: this.formatWeekLabel(week), showLabel: true }));
-            }
-            
+            // Show every single week on the X-axis
             const labeledWeeks = [];
-            const step = Math.ceil(weeks.length / 10);
             
             weeks.forEach((week, index) => {
-                const showLabel = index % step === 0 || index === weeks.length - 1;
                 let label = '';
+                let showLabel = true;
                 
-                if (showLabel) {
-                    label = this.formatWeekLabel(week);
-                } else if (index > 0) {
+                if (index > 0) {
                     // Check for gaps and add gap labels
                     const prevWeek = new Date(weeks[index - 1]);
                     const currentWeek = new Date(week);
                     const weekDiff = this.getWeekDifference(prevWeek, currentWeek);
                     
-                    if (weekDiff > 2) {
+                    if (weekDiff > 1) {
                         label = `${weekDiff} week gap`;
+                        showLabel = true;
+                    } else {
+                        label = this.formatWeekLabel(week);
+                        showLabel = true; // Show label for every week
                     }
+                } else {
+                    label = this.formatWeekLabel(week);
+                    showLabel = true;
                 }
                 
                 labeledWeeks.push({
                     date: week,
                     label: label,
-                    showLabel: showLabel || label.includes('gap')
+                    showLabel: showLabel
                 });
             });
             
@@ -356,42 +354,181 @@
             console.log('Drawing song lines with Chart.js approach...');
             console.log('Chart data:', chartData);
             
-            // Create a canvas element for Chart.js
-            const canvas = $('<canvas></canvas>');
-            canvas.attr('width', chartWidth);
-            canvas.attr('height', chartHeight);
-            canvas.css({
-                'width': chartWidth + 'px',
-                'height': chartHeight + 'px'
+            // Create sidebar for song list
+            const sidebar = $('<div class="chart-sidebar"></div>');
+            sidebar.css({
+                'width': '250px',
+                'float': 'left',
+                'padding': '20px',
+                'background': 'rgba(0, 0, 0, 0.1)',
+                'border-right': '1px solid rgba(255, 255, 255, 0.2)',
+                'height': chartHeight + 'px',
+                'overflow-y': 'auto'
             });
             
-            const chartArea = $('<div class="chart-area"></div>');
+            // Add song list to sidebar
+            this.createSongSidebar(sidebar, chartData);
+            
+            // Create main chart area
+            const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
-                'width': chartWidth + 'px',
-                'height': chartHeight + 'px',
-                'position': 'relative',
-                'border': '1px solid rgba(255, 255, 255, 0.3)',
-                'background': 'rgba(0, 0, 0, 0.1)'
+                'margin-left': '270px',
+                'width': (chartWidth - 270) + 'px'
+            });
+            
+            // Create canvas for Chart.js
+            const canvas = $('<canvas></canvas>');
+            canvas.attr('width', chartWidth - 270);
+            canvas.attr('height', chartHeight);
+            canvas.css({
+                'width': (chartWidth - 270) + 'px',
+                'height': chartHeight + 'px'
             });
             
             chartArea.append(canvas);
             
-            // Prepare data for Chart.js
+            // Prepare data for Chart.js with proper gap handling
             const chartJsData = this.prepareChartJsData(chartData);
-            console.log('Chart.js data prepared:', chartJsData);
+            console.log('Chart.js data prepared with gaps:', chartJsData);
             
             // Create the chart
-            this.createChartJsChart(canvas[0], chartJsData, chartWidth, chartHeight);
+            this.createChartJsChart(canvas[0], chartJsData, chartWidth - 270, chartHeight);
             
+            // Add both sidebar and chart area
+            chartContent.append(sidebar);
             chartContent.append(chartArea);
-            console.log('Finished drawing song lines with Chart.js');
+            console.log('Finished drawing song lines with Chart.js and sidebar');
+        }
+        
+        createSongSidebar(sidebar, chartData) {
+            const title = $('<h3 class="sidebar-title">Songs</h3>');
+            title.css({
+                'color': 'rgba(255, 255, 255, 0.9)',
+                'margin-bottom': '20px',
+                'font-size': '18px',
+                'border-bottom': '1px solid rgba(255, 255, 255, 0.2)',
+                'padding-bottom': '10px'
+            });
+            
+            sidebar.append(title);
+            
+            chartData.songs.forEach((song, index) => {
+                const colors = [
+                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+                ];
+                
+                const songItem = $('<div class="song-item"></div>');
+                songItem.css({
+                    'padding': '10px',
+                    'margin-bottom': '10px',
+                    'background': 'rgba(255, 255, 255, 0.05)',
+                    'border-radius': '5px',
+                    'border-left': '4px solid ' + colors[index % colors.length],
+                    'cursor': 'pointer',
+                    'transition': 'all 0.2s ease'
+                });
+                
+                songItem.hover(
+                    function() {
+                        $(this).css('background', 'rgba(255, 255, 255, 0.1)');
+                    },
+                    function() {
+                        $(this).css('background', 'rgba(255, 255, 255, 0.05)');
+                    }
+                );
+                
+                const songName = $('<div class="song-name"></div>');
+                songName.css({
+                    'color': 'rgba(255, 255, 255, 0.9)',
+                    'font-weight': 'bold',
+                    'margin-bottom': '5px'
+                });
+                songName.text(song.song);
+                
+                const songStats = $('<div class="song-stats"></div>');
+                songStats.css({
+                    'color': 'rgba(255, 255, 255, 0.7)',
+                    'font-size': '12px'
+                });
+                
+                const peakPosition = Math.min(...song.data.map(p => p.position));
+                const weeksOnChart = song.data.length;
+                songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
+                
+                songItem.append(songName);
+                songItem.append(songStats);
+                sidebar.append(songItem);
+            });
+        }
+        
+        createSongSidebar(sidebar, chartData) {
+            const title = $('<h3 class="sidebar-title">Songs</h3>');
+            title.css({
+                'color': 'rgba(255, 255, 255, 0.9)',
+                'margin-bottom': '20px',
+                'font-size': '18px',
+                'border-bottom': '1px solid rgba(255, 255, 255, 0.2)',
+                'padding-bottom': '10px'
+            });
+            
+            sidebar.append(title);
+            
+            chartData.songs.forEach((song, index) => {
+                const colors = [
+                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+                ];
+                
+                const songItem = $('<div class="song-item"></div>');
+                songItem.css({
+                    'padding': '10px',
+                    'margin-bottom': '10px',
+                    'background': 'rgba(255, 255, 255, 0.05)',
+                    'border-radius': '5px',
+                    'border-left': '4px solid ' + colors[index % colors.length],
+                    'cursor': 'pointer',
+                    'transition': 'all 0.2s ease'
+                });
+                
+                songItem.hover(
+                    function() {
+                        $(this).css('background', 'rgba(255, 255, 255, 0.1)');
+                    },
+                    function() {
+                        $(this).css('background', 'rgba(255, 255, 255, 0.05)');
+                    }
+                );
+                
+                const songName = $('<div class="song-name"></div>');
+                songName.css({
+                    'color': 'rgba(255, 255, 255, 0.9)',
+                    'font-weight': 'bold',
+                    'margin-bottom': '5px'
+                });
+                songName.text(song.song);
+                
+                const songStats = $('<div class="song-stats"></div>');
+                songStats.css({
+                    'color': 'rgba(255, 255, 255, 0.7)',
+                    'font-size': '12px'
+                });
+                
+                const peakPosition = Math.min(...song.chartHistory.map(p => p.position));
+                const weeksOnChart = song.chartHistory.length;
+                songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
+                
+                songItem.append(songName);
+                songItem.append(songStats);
+                sidebar.append(songItem);
+            });
         }
         
         prepareChartJsData(chartData) {
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
-                song.data.forEach(point => {
+                song.chartHistory.forEach(point => {
                     allDates.add(point.date);
                 });
             });
@@ -399,19 +536,22 @@
             const sortedDates = Array.from(allDates).sort();
             console.log('Sorted dates:', sortedDates);
             
-            // Create datasets for each song
+            // Create datasets for each song with proper gap handling
             const datasets = chartData.songs.map((song, index) => {
                 const colors = [
                     '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
+                // Create data array with null values for gaps
+                const data = sortedDates.map(date => {
+                    const point = song.chartHistory.find(p => p.date === date);
+                    return point ? point.position : null;
+                });
+                
                 return {
                     label: song.song,
-                    data: sortedDates.map(date => {
-                        const point = song.data.find(p => p.date === date);
-                        return point ? point.position : null;
-                    }),
+                    data: data,
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length],
                     borderWidth: 2,
@@ -419,12 +559,29 @@
                     pointHoverRadius: 5,
                     fill: false,
                     tension: 0.1,
-                    spanGaps: true
+                    spanGaps: false // Don't connect across gaps
                 };
             });
             
+            // Create labels with gap indicators
+            const labels = sortedDates.map((date, index) => {
+                if (index === 0) return this.formatWeekLabel(date);
+                
+                const prevDate = new Date(sortedDates[index - 1]);
+                const currentDate = new Date(date);
+                const daysDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+                
+                // If gap is more than 7 days, add gap indicator
+                if (daysDiff > 7) {
+                    const weeksGap = Math.round(daysDiff / 7);
+                    return `Gap (${weeksGap} weeks)`;
+                }
+                
+                return this.formatWeekLabel(date);
+            });
+            
             return {
-                labels: sortedDates.map(date => this.formatWeekLabel(date)),
+                labels: labels,
                 datasets: datasets
             };
         }
@@ -472,7 +629,7 @@
                                 },
                                 ticks: {
                                     color: 'rgba(255, 255, 255, 0.7)',
-                                    reverse: true, // 1 at top, 100 at bottom
+                                    reverse: false, // 1 at top, 100 at bottom
                                     callback: function(value) {
                                         return value;
                                     }
@@ -486,13 +643,7 @@
                         },
                         plugins: {
                             legend: {
-                                display: true,
-                                position: 'top',
-                                labels: {
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    usePointStyle: true,
-                                    padding: 20
-                                }
+                                display: false // Hide legend since we have sidebar
                             },
                             tooltip: {
                                 mode: 'index',

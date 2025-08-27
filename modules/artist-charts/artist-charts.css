@@ -10,66 +10,125 @@
     color: white;
 }
 
-/* Loading State */
-.chart-loading {
-    padding: 3rem;
-    text-align: center;
-    font-size: 1.1rem;
-    font-weight: 500;
+/* Song Sidebar Styles */
+.chart-sidebar {
+    width: 250px;
+    float: left;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    height: 100%;
+    overflow-y: auto;
+    border-radius: 8px 0 0 8px;
+}
+
+.sidebar-title {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 20px;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+    font-weight: 600;
+}
+
+.song-item {
+    padding: 10px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.song-item:hover {
     background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    transform: translateX(2px);
+}
+
+.song-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.song-stats {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+/* Chart Main Area */
+.chart-main-area {
+    margin-left: 270px;
+    width: calc(100% - 270px);
+    position: relative;
 }
 
 /* Chart Container */
 .chart-container {
-    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
 }
 
-/* Chart Header */
 .chart-header {
-    margin-bottom: 2rem;
+    margin-bottom: 20px;
     text-align: center;
 }
 
 .artist-name {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0 0 1rem 0;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(45deg, #fff, #f0f0f0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 24px;
+    margin-bottom: 10px;
 }
 
 .chart-stats {
     display: flex;
     justify-content: center;
-    gap: 2rem;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
 .stat-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 15px;
+    border-radius: 5px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    min-width: 100px;
 }
 
 .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 18px;
+    font-weight: bold;
     display: block;
-    margin-bottom: 0.25rem;
 }
 
 .stat-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+}
+
+/* Chart Content Layout */
+.chart-content {
+    position: relative;
+    min-width: 100%;
+    height: 400px;
+    padding: 1rem 0;
+    display: flex;
+}
+
+/* Loading State */
+.chart-loading {
+    text-align: center;
+    padding: 40px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
 }
 
 /* Chart Wrapper */
@@ -106,14 +165,6 @@
 
 .chart-scroll-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
-}
-
-/* Chart Content */
-.chart-content {
-    position: relative;
-    min-width: 100%;
-    height: 400px;
-    padding: 1rem 0;
 }
 
 /* Chart Bars Container */
@@ -244,11 +295,54 @@
     color: #ffa500;
 }
 
-/* Responsive Design */
+/* Responsive adjustments for sidebar */
+@media (max-width: 1024px) {
+    .chart-sidebar {
+        width: 200px;
+        padding: 15px;
+    }
+    
+    .chart-main-area {
+        margin-left: 220px;
+        width: calc(100% - 220px);
+    }
+    
+    .sidebar-title {
+        font-size: 16px;
+    }
+    
+    .song-name {
+        font-size: 13px;
+    }
+}
+
 @media (max-width: 768px) {
-    .urban-top-40-artist-chart {
-        margin: 1rem 0;
-        border-radius: 8px;
+    .chart-content {
+        flex-direction: column;
+    }
+    
+    .chart-sidebar {
+        width: 100%;
+        float: none;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px 8px 0 0;
+        height: auto;
+        max-height: 200px;
+    }
+    
+    .chart-main-area {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .chart-stats {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .stat-item {
+        min-width: 150px;
     }
     
     .chart-container {
@@ -257,14 +351,6 @@
     
     .artist-name {
         font-size: 2rem;
-    }
-    
-    .chart-stats {
-        gap: 1rem;
-    }
-    
-    .stat-item {
-        padding: 0.75rem 1rem;
     }
     
     .chart-content {
