@@ -224,6 +224,13 @@
     width: 100%;
 }
 
+/* Ensure canvas has proper height for full 1-100 range visibility */
+.chart-scroll-container canvas {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 600px !important;
+}
+
 .chart-scroll-container::-webkit-scrollbar {
     height: 8px;
 }

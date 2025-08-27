@@ -433,7 +433,7 @@
             // Create canvas with better sizing and spacing
             const canvas = $('<canvas></canvas>');
             const actualChartWidth = Math.max(1000, weekCount * 30); // More space per week
-            const actualChartHeight = Math.max(400, Math.floor(chartHeight * 0.67)); // Ensure minimum height
+            const actualChartHeight = Math.max(600, Math.floor(chartHeight * 0.8)); // Increased height to show full 1-100 range
             
             canvas.attr('width', actualChartWidth);
             canvas.attr('height', actualChartHeight);
@@ -481,11 +481,11 @@
                 this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, actualChartHeight);
             });
             
-            // Create song list at the bottom - 1/3 of container height
+            // Create song list at the bottom - 20% of container height
             const songListArea = $('<div class="chart-song-list-area"></div>');
             songListArea.css({
                 'width': '100%',
-                'height': Math.floor(chartHeight * 0.33) + 'px',
+                'height': Math.floor(chartHeight * 0.2) + 'px', // Reduced to 20% to give more space to chart
                 'background': 'rgba(0, 0, 0, 0.1)',
                 'border-top': '1px solid rgba(255, 255, 255, 0.2)',
                 'overflow-y': 'auto',
