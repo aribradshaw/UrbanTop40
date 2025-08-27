@@ -436,8 +436,8 @@ class UrbanTop40_Artist_Charts {
         // Extract the data object from the TypeScript file
         // This is a simple approach - in production you might want to use a proper TS parser
         
-        // First, try to find any export const that ends with 'Data'
-        $data_pattern = '/export const (\w+Data)\s*=\s*({.*?});/s';
+        // First, try to find any export const that ends with 'Data' (with optional type annotation)
+        $data_pattern = '/export const (\w+Data)(?:\s*:\s*\w+)?\s*=\s*({.*?});/s';
         
         // Debug: Check what we're looking for
         $debug_info = array(
@@ -465,8 +465,8 @@ class UrbanTop40_Artist_Charts {
             
             wp_send_json_success($artist_data);
         } else {
-            // Try to find export default with the data - simpler approach
-            $default_pattern = '/export const (\w+Data)\s*=\s*({.*?});/s';
+            // Try to find export default with the data - simpler approach (with optional type annotation)
+            $default_pattern = '/export const (\w+Data)(?:\s*:\s*\w+)?\s*=\s*({.*?});/s';
             if (preg_match($default_pattern, $ts_content, $matches)) {
                 $export_name = $matches[1];
                 $json_data = $matches[2];
