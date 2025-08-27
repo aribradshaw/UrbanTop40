@@ -62,8 +62,8 @@
 
 /* Chart Main Area */
 .chart-main-area {
-    margin-left: 270px;
-    width: calc(100% - 270px);
+    margin-left: 20px;
+    width: calc(100% - 290px);
     position: relative;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.05);

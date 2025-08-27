@@ -372,8 +372,8 @@
             // Create main chart area
             const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
-                'margin-left': '270px',
-                'width': (chartWidth - 270) + 'px',
+                'margin-left': '20px',
+                'width': (chartWidth - 290) + 'px',
                 'position': 'relative',
                 'overflow': 'hidden'
             });
@@ -390,7 +390,7 @@
             chartArea.append(canvas);
             
             // Add zoom instructions
-            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll to zoom • Drag to pan</div>');
+            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll to zoom horizontally • Drag to pan left/right</div>');
             chartArea.append(zoomInstructions);
             
             // Prepare data for Chart.js with proper gap handling
@@ -645,7 +645,13 @@
                                     color: 'rgba(255, 255, 255, 0.1)'
                                 },
                                 min: 1,
-                                max: 100
+                                max: 100,
+                                beginAtZero: false,
+                                // Ensure Y-axis stays fixed during zoom
+                                afterFit: function(axis) {
+                                    axis.min = 1;
+                                    axis.max = 100;
+                                }
                             }
                         },
                         plugins: {
@@ -669,11 +675,11 @@
                                     pinch: {
                                         enabled: true
                                     },
-                                    mode: 'xy',
+                                    mode: 'x', // Only zoom horizontally
                                 },
                                 pan: {
                                     enabled: true,
-                                    mode: 'xy',
+                                    mode: 'x', // Only pan horizontally
                                 }
                             }
                         },
