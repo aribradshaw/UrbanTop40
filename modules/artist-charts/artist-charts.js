@@ -98,6 +98,15 @@
                 </div>
             `);
             
+            // Number ones
+            const numberOnes = this.chartData.songs.filter(song => song.peakPosition === 1).length;
+            stats.append(`
+                <div class="stat-item">
+                    <span class="stat-value">${numberOnes}</span>
+                    <span class="stat-label">Number Ones</span>
+                </div>
+            `);
+            
             // Calculate total weeks from all chart history
             const allWeeks = new Set();
             this.chartData.songs.forEach(song => {
@@ -153,6 +162,12 @@
             if (this.showLegend) {
                 this.addLegend(chartContent, chartData.songs);
             }
+            
+            // Add fallback content if no lines were drawn
+            if (chartContent.find('.song-line-container').length === 0) {
+                console.log('No song lines were drawn, adding fallback content');
+                this.addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth);
+            }
         }
         
         addYAxisLabels(chartContent) {
@@ -171,11 +186,17 @@
         }
         
         processChartData() {
+            console.log('Processing chart data...');
+            console.log('Original songs data:', this.chartData.songs);
+            
             const allWeeks = new Set();
             const songTrajectories = [];
             
             // Collect all unique weeks and create song trajectories
             this.chartData.songs.forEach(song => {
+                console.log(`Processing song: ${song.song}`);
+                console.log(`Chart history:`, song.chartHistory);
+                
                 const trajectory = {
                     song: song.song,
                     color: this.getSongColor(song.song),
@@ -191,19 +212,25 @@
                     });
                 });
                 
+                console.log(`Created trajectory for ${song.song}:`, trajectory);
                 songTrajectories.push(trajectory);
             });
             
             // Sort weeks chronologically
             const sortedWeeks = Array.from(allWeeks).sort();
+            console.log('All unique weeks:', sortedWeeks);
             
             // Smart gap detection and labeling
             const labeledWeeks = this.smartWeekLabeling(sortedWeeks);
+            console.log('Labeled weeks:', labeledWeeks);
             
-            return {
+            const result = {
                 weeks: labeledWeeks,
                 songs: songTrajectories
             };
+            
+            console.log('Final processed data:', result);
+            return result;
         }
         
         getSongColor(songName) {
@@ -323,38 +350,55 @@
         }
         
         drawSongLines(chartContent, chartData, chartHeight, chartWidth) {
+            console.log('Drawing song lines...');
+            console.log('Chart data:', chartData);
+            
             const linesContainer = $('<div class="song-lines"></div>');
             
             chartData.songs.forEach(song => {
-                if (song.data.length < 2) return; // Need at least 2 points for a line
+                console.log(`Processing song: ${song.song} with ${song.data.length} data points`);
+                if (song.data.length < 2) {
+                    console.log(`Skipping ${song.song} - need at least 2 points for a line`);
+                    return;
+                }
                 
                 const line = this.createSongLine(song, chartData.weeks, chartHeight, chartWidth);
                 linesContainer.append(line);
             });
             
             chartContent.append(linesContainer);
+            console.log('Finished drawing song lines');
         }
         
         createSongLine(song, weeks, chartHeight, chartWidth) {
+            console.log(`Creating line for song: ${song.song} with ${song.data.length} data points`);
+            
             const lineContainer = $('<div class="song-line-container"></div>');
             const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" style="position: absolute; top: 0; left: 0;"></svg>`);
             
             // Create path for the line
             const path = $('<path></path>');
             let pathData = '';
+            let validPoints = 0;
             
             song.data.forEach((point, index) => {
                 const weekIndex = weeks.findIndex(w => w.date === point.date);
-                if (weekIndex === -1) return;
+                if (weekIndex === -1) {
+                    console.log(`Week not found for date: ${point.date}`);
+                    return;
+                }
                 
                 const x = (weekIndex / (weeks.length - 1)) * chartWidth;
                 const y = ((101 - point.position) / 100) * chartHeight;
+                
+                console.log(`Point ${index}: date=${point.date}, position=${point.position}, x=${x}, y=${y}`);
                 
                 if (index === 0) {
                     pathData += `M ${x} ${y}`;
                 } else {
                     pathData += ` L ${x} ${y}`;
                 }
+                validPoints++;
                 
                 // Add data point marker
                 const marker = $(`<circle r="3" fill="${song.color}"></circle>`);
@@ -368,17 +412,22 @@
                 svg.append(marker);
             });
             
-            path.attr({
-                'd': pathData,
-                'stroke': song.color,
-                'stroke-width': '2',
-                'fill': 'none',
-                'stroke-dasharray': '5,5'
-            });
+            console.log(`Path data for ${song.song}: ${pathData}`);
+            console.log(`Valid points: ${validPoints}`);
             
-            svg.append(path);
+            if (validPoints > 1) {
+                path.attr({
+                    'd': pathData,
+                    'stroke': song.color,
+                    'stroke-width': '2',
+                    'fill': 'none',
+                    'stroke-dasharray': '5,5'
+                });
+                
+                svg.append(path);
+            }
+            
             lineContainer.append(svg);
-            
             return lineContainer;
         }
         
@@ -396,6 +445,37 @@
             });
             
             chartContent.append(legendContainer);
+        }
+        
+        addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth) {
+            console.log('Adding fallback chart content');
+            
+            const fallbackContainer = $('<div class="fallback-chart"></div>');
+            fallbackContainer.css({
+                'position': 'absolute',
+                'top': '0',
+                'left': '0',
+                'width': '100%',
+                'height': '100%',
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center',
+                'color': 'rgba(255, 255, 255, 0.7)',
+                'font-size': '1.2rem',
+                'text-align': 'center',
+                'padding': '2rem'
+            });
+            
+            // Show basic song information
+            let fallbackHtml = '<div>';
+            fallbackHtml += '<h3>Chart Data Loaded</h3>';
+            fallbackHtml += `<p>${chartData.songs.length} songs with chart history</p>`;
+            fallbackHtml += `<p>${chartData.weeks.length} unique weeks</p>`;
+            fallbackHtml += '<p><em>Line chart rendering issue detected. Check console for details.</em></p>';
+            fallbackHtml += '</div>';
+            
+            fallbackContainer.html(fallbackHtml);
+            chartContent.append(fallbackContainer);
         }
         
         // Old bar chart methods removed - now using line chart
