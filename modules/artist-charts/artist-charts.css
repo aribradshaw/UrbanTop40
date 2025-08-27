@@ -305,8 +305,9 @@
     }
     
     .chart-main-area {
-        margin-left: 220px;
-        width: calc(100% - 220px);
+        margin-left: 15px;
+        width: calc(100% - 230px);
+        max-width: calc(100vw - 250px);
     }
     
     .sidebar-title {
@@ -336,6 +337,7 @@
     .chart-main-area {
         margin-left: 0;
         width: 100%;
+        max-width: 100%;
     }
     
     .chart-stats {

@@ -135,17 +135,18 @@
             // Process chart data to get all unique weeks and song trajectories
             const chartData = this.processChartData();
             
-            // Calculate chart dimensions - use a reasonable width instead of massive width
+            // Calculate chart dimensions - optimize for better spacing
             const chartHeight = parseInt(this.height) || 400;
             const weekCount = chartData.weeks.length;
-            // Use a more reasonable width calculation - max 1200px, min 800px
-            const chartWidth = Math.min(1200, Math.max(800, weekCount * 15));
+            // Use more reasonable width calculation to avoid excessive empty space
+            const chartWidth = Math.min(800, Math.max(400, weekCount * 4));
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
             // Set chart dimensions - account for sidebar
             chartContent.css({
-                'min-width': (chartWidth + 270) + 'px',
+                'min-width': (chartWidth + 290) + 'px',
+                'max-width': (chartWidth + 290) + 'px',
                 'height': chartHeight + 'px',
                 'position': 'relative'
             });
