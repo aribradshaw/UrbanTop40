@@ -178,7 +178,8 @@
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
                 const label = $(`<div class="y-axis-label">${position}</div>`);
-                const yPos = ((101 - position) / 100) * 100; // Invert so 1 is at top
+                // Corrected: 1 at top (0%), 100 at bottom (100%)
+                const yPos = (position / 100) * 100;
                 label.css('top', yPos + '%');
                 yAxisLabels.append(label);
             });
@@ -306,7 +307,8 @@
             // Horizontal grid lines for chart positions
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
-                const yPos = ((101 - position) / 100) * chartHeight;
+                // Corrected: 1 at top (0), 100 at bottom (chartHeight)
+                const yPos = (position / 100) * chartHeight;
                 const line = $('<div class="grid-line horizontal"></div>');
                 line.css({
                     'position': 'absolute',
@@ -393,7 +395,8 @@
                 }
                 
                 const x = (weekIndex / (weeks.length - 1)) * chartWidth;
-                const y = ((101 - point.position) / 100) * chartHeight;
+                // Corrected Y-axis calculation: 1 at top (low Y), 100 at bottom (high Y)
+                const y = (point.position / 100) * chartHeight;
                 
                 console.log(`Point ${index}: date=${point.date}, position=${point.position}, x=${x}, y=${y}`);
                 
