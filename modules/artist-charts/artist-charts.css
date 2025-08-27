@@ -141,9 +141,10 @@
     position: relative;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    padding: 0;
+    padding: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
+    min-height: 500px;
 }
 
 /* Chart Scroll Container */
@@ -616,4 +617,12 @@
     display: block;
     max-width: 100%;
     height: auto;
+    min-height: 400px;
+}
+
+/* Ensure chart canvas has proper dimensions */
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 400px !important;
+    max-height: 500px;
 }

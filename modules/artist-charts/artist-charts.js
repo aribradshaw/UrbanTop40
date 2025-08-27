@@ -575,11 +575,14 @@
                     data: data,
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length],
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointHoverRadius: 5,
+                    borderWidth: 4,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: colors[index % colors.length],
+                    pointBorderColor: 'rgba(255, 255, 255, 0.8)',
+                    pointBorderWidth: 2,
                     fill: false,
-                    tension: 0.1,
+                    tension: 0.2,
                     spanGaps: false // Don't connect across gaps
                 };
             });
@@ -629,28 +632,29 @@
                     type: 'line',
                     data: data,
                     options: {
-                        responsive: false,
+                        responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-                                                    x: {
-                            display: true,
-                            ticks: {
-                                color: 'rgba(255, 255, 255, 0.9)',
-                                maxRotation: 45,
-                                minRotation: 45,
-                                font: {
-                                    size: 14,
-                                    weight: '600'
+                            x: {
+                                display: true,
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.9)',
+                                    maxRotation: 0,
+                                    minRotation: 0,
+                                    font: {
+                                        size: 16,
+                                        weight: '600'
+                                    },
+                                    padding: 16,
+                                    maxTicksLimit: 20,
+                                    callback: function(value, index, values) {
+                                        // Show more labels for better readability
+                                        return index % 3 === 0 ? value : '';
+                                    }
                                 },
-                                padding: 12,
-                                maxTicksLimit: 15,
-                                callback: function(value, index, values) {
-                                    // Show every other week label for better spacing
-                                    return index % 2 === 0 ? value : '';
-                                }
-                            },
                             grid: {
-                                color: 'rgba(255, 255, 255, 0.15)'
+                                color: 'rgba(255, 255, 255, 0.25)',
+                                lineWidth: 1
                             }
                         },
                             y: {
@@ -662,20 +666,21 @@
                                     color: 'rgba(255, 255, 255, 0.9)',
                                     reverse: false, // 1 at top, 100 at bottom
                                     font: {
-                                        size: 14,
+                                        size: 16,
                                         weight: '600'
                                     },
-                                    padding: 10,
+                                    padding: 12,
                                     callback: function(value, index, values) {
                                         // Show more positions for better readability
-                                        if ([1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100].includes(value)) {
+                                        if ([1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].includes(value)) {
                                             return value;
                                         }
                                         return '';
                                     }
                                 },
                                 grid: {
-                                    color: 'rgba(255, 255, 255, 0.15)'
+                                    color: 'rgba(255, 255, 255, 0.25)',
+                                    lineWidth: 1
                                 },
                                 min: 1,
                                 max: 100,
@@ -762,11 +767,11 @@
                 console.log('BULLETPROOF Chart.js chart created successfully');
                 this.chartInstance = chart;
                 
-                // Set initial zoom level - start more zoomed in
+                // Set initial zoom level - start with reasonable zoom
                 setTimeout(() => {
                     if (chart.zoom) {
                         chart.zoom.zoom({
-                            x: 2.5, // Start 2.5x zoomed in
+                            x: 1.5, // Start 1.5x zoomed in for better readability
                             y: 1    // No vertical zoom
                         });
                     }
