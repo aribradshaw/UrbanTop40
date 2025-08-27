@@ -58,7 +58,7 @@
 
 .song-stats {
     color: rgba(255, 255, 255, 0.7);
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1.2;
 }
 
@@ -114,7 +114,7 @@
 
 .stat-label {
     color: rgba(255, 255, 255, 0.7);
-    font-size: 12px;
+    font-size: 14px;
     text-transform: uppercase;
 }
 
@@ -600,7 +600,7 @@
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 1rem;
     z-index: 100;
     pointer-events: none;
     opacity: 0.8;
