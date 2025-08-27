@@ -138,8 +138,8 @@
             // Calculate chart dimensions - optimize for better spacing
             const chartHeight = parseInt(this.height) || 400;
             const weekCount = chartData.weeks.length;
-            // Use more reasonable width calculation to avoid excessive empty space
-            const chartWidth = Math.min(600, Math.max(300, weekCount * 2));
+            // ROBUST width calculation to eliminate blank space - each week gets reasonable space
+            const chartWidth = Math.min(1000, Math.max(600, weekCount * 3)); // 3px per week is reasonable
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
@@ -148,9 +148,7 @@
                 'min-width': (chartWidth + 290) + 'px',
                 'max-width': (chartWidth + 290) + 'px',
                 'height': chartHeight + 'px',
-                'position': 'relative',
-                'overflow-x': 'auto',
-                'overflow-y': 'hidden'
+                'position': 'relative'
             });
             
             // Add grid lines
@@ -178,8 +176,8 @@
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
                 const label = $(`<div class="y-axis-label">${position}</div>`);
-                // Fixed: 1 at top (0%), 100 at bottom (100%)
-                const yPos = ((100 - position) / 100) * 100;
+                // ROBUST Y-axis positioning: 1 at top (0%), 100 at bottom (100%)
+                const yPos = (position - 1) / 99 * 100; // 1->0%, 100->100%
                 label.css('top', yPos + '%');
                 yAxisLabels.append(label);
             });
@@ -308,8 +306,8 @@
             // Horizontal grid lines for chart positions
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
-                // Fixed: 1 at top (0), 100 at bottom (chartHeight)
-                const yPos = ((100 - position) / 100) * chartHeight;
+                // ROBUST grid line positioning: 1 at top (0), 100 at bottom (chartHeight)
+                const yPos = (position - 1) / 99 * chartHeight; // 1->0, 100->chartHeight
                 const line = $('<div class="grid-line horizontal"></div>');
                 line.css({
                     'position': 'absolute',
@@ -372,7 +370,7 @@
             // Add song list to sidebar
             this.createSongSidebar(sidebar, chartData);
             
-            // Create main chart area
+            // Create main chart area with ROBUST horizontal scrolling
             const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
                 'margin-left': '20px',
@@ -381,16 +379,29 @@
                 'overflow': 'hidden'
             });
             
-            // Create canvas for Chart.js
-            const canvas = $('<canvas></canvas>');
-            canvas.attr('width', chartWidth - 270);
-            canvas.attr('height', chartHeight);
-            canvas.css({
-                'width': (chartWidth - 270) + 'px',
-                'height': chartHeight + 'px'
+            // Create scrollable container for proper horizontal scrolling
+            const scrollContainer = $('<div class="chart-scroll-container"></div>');
+            scrollContainer.css({
+                'width': '100%',
+                'overflow-x': 'auto',
+                'overflow-y': 'hidden',
+                'position': 'relative'
             });
             
-            chartArea.append(canvas);
+            chartArea.append(scrollContainer);
+            
+            // Create canvas with EXACT width to eliminate blank space
+            const canvas = $('<canvas></canvas>');
+            const actualChartWidth = chartWidth - 290; // Match container width exactly
+            canvas.attr('width', actualChartWidth);
+            canvas.attr('height', chartHeight);
+            canvas.css({
+                'width': actualChartWidth + 'px',
+                'height': chartHeight + 'px',
+                'display': 'block'
+            });
+            
+            scrollContainer.append(canvas);
             
             // Add zoom instructions
             const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll to zoom horizontally • Drag to pan left/right</div>');
@@ -400,8 +411,8 @@
             const chartJsData = this.prepareChartJsData(chartData);
             console.log('Chart.js data prepared with gaps:', chartJsData);
             
-            // Create the chart
-            this.createChartJsChart(canvas[0], chartJsData, chartWidth - 270, chartHeight);
+            // Create the chart with correct dimensions
+            this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, chartHeight);
             
             // Add both sidebar and chart area
             chartContent.append(sidebar);

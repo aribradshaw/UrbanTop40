@@ -68,7 +68,6 @@
     overflow: hidden;
     background: rgba(0, 0, 0, 0.05);
     border-radius: 0 8px 8px 0;
-    max-width: calc(100vw - 350px);
 }
 
 /* Remove excessive padding and margins */
@@ -122,9 +121,7 @@
     height: 400px;
     padding: 1rem 0;
     display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    max-width: 100%;
+    overflow: hidden;
 }
 
 /* Loading State */
@@ -135,7 +132,7 @@
     font-size: 16px;
 }
 
-/* Ensure chart doesn't extend beyond viewport */
+/* Chart Wrapper */
 .chart-wrapper {
     position: relative;
     background: rgba(255, 255, 255, 0.05);
@@ -143,25 +140,33 @@
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
-    max-width: 100%;
 }
 
-/* Horizontal scrollbar styling */
-.chart-content::-webkit-scrollbar {
+/* Chart Scroll Container */
+.chart-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    width: 100%;
+}
+
+.chart-scroll-container::-webkit-scrollbar {
     height: 8px;
 }
 
-.chart-content::-webkit-scrollbar-track {
+.chart-scroll-container::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
 
-.chart-content::-webkit-scrollbar-thumb {
+.chart-scroll-container::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
     border-radius: 4px;
 }
 
-.chart-content::-webkit-scrollbar-thumb:hover {
+.chart-scroll-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
 
