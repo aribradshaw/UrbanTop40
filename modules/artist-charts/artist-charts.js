@@ -73,8 +73,8 @@
             this.container.find('.chart-loading').hide();
             this.container.find('.chart-container').show().addClass('fade-in');
             
-            // Set artist name
-            this.container.find('.artist-name').text(this.chartData.name);
+            // Set artist name with chart type
+            this.container.find('.artist-name').text(`${this.chartData.name} - All Songs Chart History`);
             
             // Render stats
             this.renderStats();
@@ -98,21 +98,18 @@
                 </div>
             `);
             
-            // Number ones
-            const numberOnes = this.chartData.songs.filter(song => song.peakPosition === 1).length;
-            stats.append(`
-                <div class="stat-item">
-                    <span class="stat-value">${numberOnes}</span>
-                    <span class="stat-label">Number Ones</span>
-                </div>
-            `);
+            // Calculate total weeks from all chart history
+            const allWeeks = new Set();
+            this.chartData.songs.forEach(song => {
+                song.chartHistory.forEach(entry => {
+                    allWeeks.add(entry.date);
+                });
+            });
             
-            // Top 10 hits
-            const topTens = this.chartData.songs.filter(song => song.peakPosition <= 10).length;
             stats.append(`
                 <div class="stat-item">
-                    <span class="stat-value">${topTens}</span>
-                    <span class="stat-label">Top 10 Hits</span>
+                    <span class="stat-value">${allWeeks.size}</span>
+                    <span class="stat-label">Total Weeks</span>
                 </div>
             `);
         }
@@ -126,40 +123,36 @@
             // Add Y-axis labels (1 at top, 100 at bottom)
             this.addYAxisLabels(chartContent);
             
-            // Sort songs by peak position for better visualization
-            const sortedSongs = [...this.chartData.songs].sort((a, b) => a.peakPosition - b.peakPosition);
+            // Process chart data to get all unique weeks and song trajectories
+            const chartData = this.processChartData();
             
             // Calculate chart dimensions
             const chartHeight = parseInt(this.height);
-            const songCount = sortedSongs.length;
-            const barWidth = Math.max(8, Math.min(20, 800 / songCount)); // Responsive bar width
+            const weekCount = chartData.weeks.length;
+            const chartWidth = Math.max(800, weekCount * 20); // 20px per week minimum
             
-            console.log('Chart dimensions:', { chartHeight, songCount, barWidth });
+            console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
-            // Set minimum width for scrollable content
-            const minWidth = Math.max(800, songCount * (barWidth + 2));
-            chartContent.css('min-width', minWidth + 'px');
-            
-            // Create chart bars container
-            const barsContainer = $('<div class="chart-bars-container"></div>');
-            barsContainer.css({
-                'display': 'flex',
-                'align-items': 'flex-end',
-                'gap': '2px',
-                'height': '100%',
+            // Set chart dimensions
+            chartContent.css({
+                'min-width': chartWidth + 'px',
+                'height': chartHeight + 'px',
                 'position': 'relative'
             });
             
-            // Create chart bars
-            sortedSongs.forEach((song, index) => {
-                const bar = this.createChartBar(song, index, barWidth, chartHeight);
-                barsContainer.append(bar);
-            });
+            // Add grid lines
+            this.addGridLines(chartContent, chartHeight, chartWidth);
             
-            chartContent.append(barsContainer);
+            // Add X-axis labels (weeks)
+            this.addXAxisLabels(chartContent, chartData.weeks, chartWidth);
             
-            // Add song labels
-            this.addSongLabels(chartContent, sortedSongs, barWidth);
+            // Draw song lines
+            this.drawSongLines(chartContent, chartData, chartHeight, chartWidth);
+            
+            // Add legend
+            if (this.showLegend) {
+                this.addLegend(chartContent, chartData.songs);
+            }
         }
         
         addYAxisLabels(chartContent) {
@@ -177,97 +170,267 @@
             chartContent.append(yAxisLabels);
         }
         
-        createChartBar(song, index, barWidth, chartHeight) {
-            const bar = $('<div class="chart-bar"></div>');
+        processChartData() {
+            const allWeeks = new Set();
+            const songTrajectories = [];
             
-            // Calculate bar height based on peak position
-            // Position 1 = 100% height, Position 100 = 0% height
-            const heightPercentage = ((101 - song.peakPosition) / 100) * 100;
-            const barHeight = (heightPercentage / 100) * chartHeight;
-            
-            console.log(`Creating bar for ${song.song}: peak=${song.peakPosition}, height=${barHeight}px, width=${barWidth}px`);
-            
-            bar.css({
-                'width': barWidth + 'px',
-                'height': barHeight + 'px',
-                'min-width': barWidth + 'px'
-            });
-            
-            // Add special classes for peak positions
-            if (song.peakPosition === 1) {
-                bar.addClass('number-one');
-            } else if (song.peakPosition <= 10) {
-                bar.addClass('peak');
-            }
-            
-            // Add data attributes for tooltip
-            bar.attr({
-                'data-song': song.song,
-                'data-peak': song.peakPosition,
-                'data-weeks': song.totalWeeks,
-                'data-featured': song.featuredArtists.join(', ')
-            });
-            
-            // Add position label on top of bar
-            if (song.peakPosition <= 20) { // Only show labels for top 20 to avoid clutter
-                const positionLabel = $(`<div class="chart-label position">${song.peakPosition}</div>`);
-                positionLabel.css({
-                    'left': (index * (barWidth + 2) + barWidth / 2) + 'px'
+            // Collect all unique weeks and create song trajectories
+            this.chartData.songs.forEach(song => {
+                const trajectory = {
+                    song: song.song,
+                    color: this.getSongColor(song.song),
+                    data: []
+                };
+                
+                song.chartHistory.forEach(entry => {
+                    allWeeks.add(entry.date);
+                    trajectory.data.push({
+                        date: entry.date,
+                        position: entry.position,
+                        week: entry.weeksOnChart
+                    });
                 });
-                this.container.find('.chart-content').append(positionLabel);
-            }
+                
+                songTrajectories.push(trajectory);
+            });
             
-            return bar;
+            // Sort weeks chronologically
+            const sortedWeeks = Array.from(allWeeks).sort();
+            
+            // Smart gap detection and labeling
+            const labeledWeeks = this.smartWeekLabeling(sortedWeeks);
+            
+            return {
+                weeks: labeledWeeks,
+                songs: songTrajectories
+            };
         }
         
-        addSongLabels(chartContent, songs, barWidth) {
-            const labelsContainer = $('<div class="chart-labels"></div>');
+        getSongColor(songName) {
+            // Generate consistent colors for each song
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+                '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+                '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+            ];
             
-            songs.forEach((song, index) => {
-                const songLabel = $(`<div class="chart-label song">${song.song}</div>`);
-                songLabel.css({
-                    'left': (index * (barWidth + 2) + barWidth / 2) + 'px'
+            let hash = 0;
+            for (let i = 0; i < songName.length; i++) {
+                hash = songName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            hash = Math.abs(hash);
+            
+            return colors[hash % colors.length];
+        }
+        
+        smartWeekLabeling(weeks) {
+            if (weeks.length <= 10) {
+                return weeks.map(week => ({ date: week, label: this.formatWeekLabel(week), showLabel: true }));
+            }
+            
+            const labeledWeeks = [];
+            const step = Math.ceil(weeks.length / 10);
+            
+            weeks.forEach((week, index) => {
+                const showLabel = index % step === 0 || index === weeks.length - 1;
+                let label = '';
+                
+                if (showLabel) {
+                    label = this.formatWeekLabel(week);
+                } else if (index > 0) {
+                    // Check for gaps and add gap labels
+                    const prevWeek = new Date(weeks[index - 1]);
+                    const currentWeek = new Date(week);
+                    const weekDiff = this.getWeekDifference(prevWeek, currentWeek);
+                    
+                    if (weekDiff > 2) {
+                        label = `${weekDiff} week gap`;
+                    }
+                }
+                
+                labeledWeeks.push({
+                    date: week,
+                    label: label,
+                    showLabel: showLabel || label.includes('gap')
                 });
-                labelsContainer.append(songLabel);
             });
             
-            chartContent.append(labelsContainer);
+            return labeledWeeks;
         }
+        
+        formatWeekLabel(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+        }
+        
+        getWeekDifference(date1, date2) {
+            const oneWeek = 7 * 24 * 60 * 60 * 1000;
+            return Math.round(Math.abs((date2 - date1) / oneWeek));
+        }
+        
+        addGridLines(chartContent, chartHeight, chartWidth) {
+            const gridContainer = $('<div class="chart-grid"></div>');
+            
+            // Horizontal grid lines for chart positions
+            const positions = [1, 25, 50, 75, 100];
+            positions.forEach(position => {
+                const yPos = ((101 - position) / 100) * chartHeight;
+                const line = $('<div class="grid-line horizontal"></div>');
+                line.css({
+                    'position': 'absolute',
+                    'top': yPos + 'px',
+                    'left': '0',
+                    'width': '100%',
+                    'height': '1px',
+                    'background': 'rgba(255, 255, 255, 0.1)',
+                    'z-index': '1'
+                });
+                gridContainer.append(line);
+            });
+            
+            chartContent.append(gridContainer);
+        }
+        
+        addXAxisLabels(chartContent, weeks, chartWidth) {
+            const xAxisContainer = $('<div class="x-axis-labels"></div>');
+            
+            weeks.forEach((week, index) => {
+                if (week.showLabel) {
+                    const label = $('<div class="x-axis-label"></div>');
+                    const xPos = (index / (weeks.length - 1)) * chartWidth;
+                    
+                    label.text(week.label);
+                    label.css({
+                        'position': 'absolute',
+                        'bottom': '-30px',
+                        'left': xPos + 'px',
+                        'transform': 'translateX(-50%) rotate(-45deg)',
+                        'font-size': '0.7rem',
+                        'color': 'rgba(255, 255, 255, 0.8)',
+                        'white-space': 'nowrap',
+                        'z-index': '10'
+                    });
+                    
+                    xAxisContainer.append(label);
+                }
+            });
+            
+            chartContent.append(xAxisContainer);
+        }
+        
+        drawSongLines(chartContent, chartData, chartHeight, chartWidth) {
+            const linesContainer = $('<div class="song-lines"></div>');
+            
+            chartData.songs.forEach(song => {
+                if (song.data.length < 2) return; // Need at least 2 points for a line
+                
+                const line = this.createSongLine(song, chartData.weeks, chartHeight, chartWidth);
+                linesContainer.append(line);
+            });
+            
+            chartContent.append(linesContainer);
+        }
+        
+        createSongLine(song, weeks, chartHeight, chartWidth) {
+            const lineContainer = $('<div class="song-line-container"></div>');
+            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" style="position: absolute; top: 0; left: 0;"></svg>`);
+            
+            // Create path for the line
+            const path = $('<path></path>');
+            let pathData = '';
+            
+            song.data.forEach((point, index) => {
+                const weekIndex = weeks.findIndex(w => w.date === point.date);
+                if (weekIndex === -1) return;
+                
+                const x = (weekIndex / (weeks.length - 1)) * chartWidth;
+                const y = ((101 - point.position) / 100) * chartHeight;
+                
+                if (index === 0) {
+                    pathData += `M ${x} ${y}`;
+                } else {
+                    pathData += ` L ${x} ${y}`;
+                }
+                
+                // Add data point marker
+                const marker = $(`<circle r="3" fill="${song.color}"></circle>`);
+                marker.attr({
+                    'cx': x,
+                    'cy': y,
+                    'data-song': song.song,
+                    'data-position': point.position,
+                    'data-date': point.date
+                });
+                svg.append(marker);
+            });
+            
+            path.attr({
+                'd': pathData,
+                'stroke': song.color,
+                'stroke-width': '2',
+                'fill': 'none',
+                'stroke-dasharray': '5,5'
+            });
+            
+            svg.append(path);
+            lineContainer.append(svg);
+            
+            return lineContainer;
+        }
+        
+        addLegend(chartContent, songs) {
+            const legendContainer = $('<div class="chart-legend"></div>');
+            
+            songs.forEach(song => {
+                const legendItem = $(`
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: ${song.color}"></span>
+                        <span class="legend-text">${song.song}</span>
+                    </div>
+                `);
+                legendContainer.append(legendItem);
+            });
+            
+            chartContent.append(legendContainer);
+        }
+        
+        // Old bar chart methods removed - now using line chart
         
         addEventListeners() {
             const self = this;
             
-            // Bar hover events
-            this.container.on('mouseenter', '.chart-bar', function(e) {
-                const bar = $(this);
-                const song = bar.data('song');
-                const peak = bar.data('peak');
-                const weeks = bar.data('weeks');
-                const featured = bar.data('featured');
+            // Line chart hover events
+            this.container.on('mouseenter', 'circle', function(e) {
+                const circle = $(this);
+                const song = circle.data('song');
+                const position = circle.data('position');
+                const date = circle.data('date');
                 
                 self.showTooltip(e, {
                     song: song,
-                    peak: peak,
-                    weeks: weeks,
-                    featured: featured
+                    position: position,
+                    date: date
                 });
             });
             
-            this.container.on('mouseleave', '.chart-bar', function() {
+            this.container.on('mouseleave', 'circle', function() {
                 self.hideTooltip();
             });
             
-            // Bar click events
-            this.container.on('click', '.chart-bar', function() {
-                const bar = $(this);
-                const song = bar.data('song');
+            // Line click events
+            this.container.on('click', 'path', function(e) {
+                const path = $(this);
+                const songName = path.closest('.song-line-container').find('circle').first().data('song');
                 
-                // Highlight the clicked bar
-                self.container.find('.chart-bar').removeClass('active');
-                bar.addClass('active');
+                // Highlight the clicked line
+                self.container.find('path').removeClass('active');
+                path.addClass('active');
                 
-                // You could add more functionality here, like showing detailed song info
-                console.log('Selected song:', song);
+                console.log('Selected song:', songName);
             });
             
             // Scroll events for smooth animations
@@ -281,9 +444,8 @@
             
             const tooltipContent = `
                 <div class="tooltip-title">${data.song}</div>
-                <div class="tooltip-detail"><strong>Peak Position:</strong> #${data.peak}</div>
-                <div class="tooltip-detail"><strong>Weeks on Chart:</strong> ${data.weeks}</div>
-                ${data.featured ? `<div class="tooltip-detail"><strong>Featured:</strong> ${data.featured}</div>` : ''}
+                <div class="tooltip-detail"><strong>Position:</strong> #${data.position}</div>
+                <div class="tooltip-detail"><strong>Date:</strong> ${data.date}</div>
             `;
             
             this.tooltip.html(tooltipContent).addClass('show');
@@ -319,7 +481,7 @@
                 this.tooltip = null;
             }
             
-            this.container.off('mouseenter mouseleave click', '.chart-bar');
+            this.container.off('mouseenter mouseleave click', 'circle path');
             this.container.find('.chart-scroll-container').off('scroll');
         }
     }

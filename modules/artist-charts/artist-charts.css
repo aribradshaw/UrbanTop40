@@ -347,6 +347,115 @@
     clip-path: polygon(0 100%, 100% 100%, 100% 0, 0 0);
 }
 
+/* Line Chart Styles */
+.chart-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.grid-line.horizontal {
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.x-axis-labels {
+    position: absolute;
+    bottom: -40px;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    pointer-events: none;
+}
+
+.x-axis-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    transform-origin: center;
+}
+
+.song-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.song-line-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.song-line-container svg {
+    width: 100%;
+    height: 100%;
+}
+
+.song-line-container path {
+    cursor: pointer;
+    transition: stroke-width 0.2s ease;
+}
+
+.song-line-container path:hover {
+    stroke-width: 4;
+}
+
+.song-line-container path.active {
+    stroke-width: 4;
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.song-line-container circle {
+    cursor: pointer;
+    transition: r 0.2s ease;
+}
+
+.song-line-container circle:hover {
+    r: 5;
+}
+
+.chart-legend {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 6px;
+    max-width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+    color: white;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.legend-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Animation Classes */
 .chart-bar.animate {
     animation: chartBarGrow 0.8s ease-out;
