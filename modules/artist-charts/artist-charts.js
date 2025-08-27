@@ -358,6 +358,16 @@
             
             const linesContainer = $('<div class="song-lines"></div>');
             
+            // Create a single chart area that will contain all songs
+            const chartArea = $('<div class="chart-area"></div>');
+            chartArea.css({
+                'width': chartWidth + 'px',
+                'height': chartHeight + 'px',
+                'position': 'relative',
+                'border': '1px solid rgba(255, 255, 255, 0.3)',
+                'background': 'rgba(0, 0, 0, 0.1)'
+            });
+            
             chartData.songs.forEach(song => {
                 console.log(`Processing song: ${song.song} with ${song.data.length} data points`);
                 if (song.data.length < 2) {
@@ -365,21 +375,18 @@
                     return;
                 }
                 
-                const line = this.createSongLine(song, chartData.weeks, chartHeight, chartWidth);
-                linesContainer.append(line);
+                this.createSongLineInArea(chartArea, song, chartData.weeks, chartHeight, chartWidth);
             });
             
+            linesContainer.append(chartArea);
             chartContent.append(linesContainer);
-            console.log('Finished drawing song lines');
-            console.log('Lines container HTML:', linesContainer.html());
-            console.log('Chart content HTML:', chartContent.html());
+            console.log('Finished drawing song lines with single chart area');
         }
         
-        createSongLine(song, weeks, chartHeight, chartWidth) {
+        createSongLineInArea(chartArea, song, weeks, chartHeight, chartWidth) {
             console.log(`Creating line for song: ${song.song} with ${song.data.length} data points`);
             
-            const lineContainer = $('<div class="song-line-container"></div>');
-            // Create SVG with visible background for debugging
+            // Create SVG directly in the chart area
             const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none" style="background: rgba(255, 0, 0, 0.1); border: 1px solid yellow;"></svg>`);
             
             console.log('Created SVG element:', svg[0]);
@@ -411,7 +418,7 @@
                 validPoints++;
                 
                 // Add data point marker
-                const marker = $(`<circle r="3" fill="${song.color}"></circle>`);
+                const marker = $('<circle r="3" fill="${song.color}"></circle>');
                 marker.attr({
                     'cx': x,
                     'cy': y,
@@ -437,10 +444,9 @@
                 console.log('Added path to SVG:', path[0]);
             }
             
-            lineContainer.append(svg);
-            console.log('Final line container:', lineContainer[0]);
-            console.log('Final SVG in container:', lineContainer.find('svg')[0]);
-            return lineContainer;
+            // Add this SVG directly to the chart area
+            chartArea.append(svg);
+            console.log('Added SVG to chart area');
         }
         
         addLegend(chartContent, songs) {
