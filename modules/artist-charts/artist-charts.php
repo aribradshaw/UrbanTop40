@@ -54,9 +54,9 @@ class UrbanTop40_Artist_Charts {
             'chart_type' => 'line' // line, area, bar
         ), $atts);
         
-        if (empty($atts['artist'])) {
-            return '<p>Error: Artist parameter is required. Usage: [artist_chart artist="the_beatles"]</p>';
-        }
+                 if (empty($atts['artist'])) {
+             return '<p>Error: Artist parameter is required. Usage: [artist_chart artist="the_beatles_data"]</p>';
+         }
         
         // Generate unique ID for this chart
         $chart_id = 'artist-chart-' . sanitize_title($atts['artist']) . '-' . uniqid();
@@ -149,16 +149,17 @@ class UrbanTop40_Artist_Charts {
                     </div>
                 </div>
                 
-                <div class="urban-top-40-admin-card">
-                    <h2>Shortcode Usage</h2>
-                    <p>Use these shortcodes to display artist charts on your pages and posts:</p>
+                                 <div class="urban-top-40-admin-card">
+                     <h2>Shortcode Usage</h2>
+                     <p><strong>Important:</strong> Use the exact filename (without .ts extension) as the artist parameter.</p>
+                     <p>Use these shortcodes to display artist charts on your pages and posts:</p>
                     
                     <div class="shortcode-examples">
-                        <h3>Basic Usage:</h3>
-                        <code>[artist_chart artist="the_beatles"]</code>
-                        
-                        <h3>With Custom Options:</h3>
-                        <code>[artist_chart artist="the_beatles" height="500" width="100%" show_legend="true" chart_type="line"]</code>
+                                                 <h3>Basic Usage:</h3>
+                         <code>[artist_chart artist="the_beatles_data"]</code>
+                         
+                         <h3>With Custom Options:</h3>
+                         <code>[artist_chart artist="the_beatles_data" height="500" width="100%" show_legend="true" chart_type="line"]</code>
                         
                         <h3>Parameters:</h3>
                         <ul>
@@ -195,11 +196,11 @@ class UrbanTop40_Artist_Charts {
                         resultsDiv.style.display = 'block';
                         resultsDiv.innerHTML = 'Testing...';
                         
-                        jQuery.post(ajaxurl, {
-                            action: 'get_artist_chart_data',
-                            artist: 'the_beatles',
-                            nonce: '<?php echo wp_create_nonce('urban_top_40_charts_nonce'); ?>'
-                        })
+                                                 jQuery.post(ajaxurl, {
+                             action: 'get_artist_chart_data',
+                             artist: 'the_beatles_data',
+                             nonce: '<?php echo wp_create_nonce('urban_top_40_charts_nonce'); ?>'
+                         })
                         .done(function(response) {
                             if (response.success) {
                                 resultsDiv.innerHTML = '<div style="color: green;"><strong>✓ Success!</strong> Data loaded successfully.<br>Artist: ' + response.data.name + '<br>Songs: ' + response.data.totalSongs + '</div>';
@@ -295,15 +296,15 @@ class UrbanTop40_Artist_Charts {
         echo '<p><strong>Directory readable:</strong> ' . (is_readable($artist_charts_dir) ? 'Yes' : 'No') . '</p>';
         echo '<p><strong>Files found:</strong> ' . count($ts_files) . '</p>';
         
-        // Check specific file existence
-        $test_file = $artist_charts_dir . 'the_beatles.ts';
-        echo '<p><strong>Test file (the_beatles.ts):</strong> ' . esc_html($test_file) . '</p>';
-        echo '<p><strong>File exists:</strong> ' . (file_exists($test_file) ? 'Yes' : 'No') . '</p>';
-        echo '<p><strong>File readable:</strong> ' . (is_readable($test_file) ? 'Yes' : 'No') . '</p>';
-        if (file_exists($test_file)) {
-            echo '<p><strong>File size:</strong> ' . number_format(filesize($test_file)) . ' bytes</p>';
-            echo '<p><strong>File permissions:</strong> ' . substr(sprintf('%o', fileperms($test_file)), -4) . '</p>';
-        }
+                 // Check specific file existence
+         $test_file = $artist_charts_dir . 'the_beatles_data.ts';
+         echo '<p><strong>Test file (the_beatles_data.ts):</strong> ' . esc_html($test_file) . '</p>';
+         echo '<p><strong>File exists:</strong> ' . (file_exists($test_file) ? 'Yes' : 'No') . '</p>';
+         echo '<p><strong>File readable:</strong> ' . (is_readable($test_file) ? 'Yes' : 'No') . '</p>';
+         if (file_exists($test_file)) {
+             echo '<p><strong>File size:</strong> ' . number_format(filesize($test_file)) . ' bytes</p>';
+             echo '<p><strong>File permissions:</strong> ' . substr(sprintf('%o', fileperms($test_file)), -4) . '</p>';
+         }
         echo '</div>';
     }
     
