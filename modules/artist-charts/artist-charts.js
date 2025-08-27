@@ -165,7 +165,7 @@
             }
             
             // Add fallback content if no lines were drawn
-            if (chartContent.find('.song-line-container').length === 0) {
+            if (chartContent.find('.chart-area').length === 0) {
                 console.log('No song lines were drawn, adding fallback content');
                 this.addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth);
             }
