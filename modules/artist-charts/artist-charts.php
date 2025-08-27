@@ -160,11 +160,18 @@ class UrbanTop40_ArtistCharts {
         $beatles_data_path = plugin_dir_path(__FILE__) . '../../assets/artistcharts/the_beatles_data.ts';
         
         if (!file_exists($beatles_data_path)) {
-            wp_send_json_error('Artist data file not found');
+            wp_send_json_error('Artist data file not found at: ' . $beatles_data_path);
         }
         
         // Read and parse the TypeScript file to extract the data
         $file_content = file_get_contents($beatles_data_path);
+        
+        if ($file_content === false) {
+            wp_send_json_error('Failed to read artist data file');
+        }
+        
+        // Debug: Log file content length
+        error_log('Beatles data file size: ' . strlen($file_content) . ' bytes');
         
         // Extract the JSON data from the TypeScript export
         if (preg_match('/export const the_beatlesData: ExportedArtistData = ({.*});/s', $file_content, $matches)) {
@@ -173,16 +180,29 @@ class UrbanTop40_ArtistCharts {
             // Clean up the JSON data (remove comments, fix quotes, etc.)
             $json_data = $this->clean_typescript_json($json_data);
             
+            // Debug: Log the cleaned JSON for troubleshooting
+            error_log('Cleaned JSON data length: ' . strlen($json_data) . ' bytes');
+            error_log('Cleaned JSON data preview: ' . substr($json_data, 0, 500) . '...');
+            
             // Decode the JSON
             $artist_data = json_decode($json_data, true);
             
             if ($artist_data) {
+                error_log('Successfully parsed artist data with ' . count($artist_data['songs']) . ' songs');
                 wp_send_json_success($artist_data);
             } else {
-                wp_send_json_error('Failed to parse artist data');
+                // Get JSON error details
+                $json_error = json_last_error_msg();
+                $json_error_code = json_last_error();
+                error_log('JSON decode error code: ' . $json_error_code);
+                error_log('JSON decode error: ' . $json_error);
+                error_log('JSON data that failed to parse: ' . substr($json_data, 0, 1000));
+                wp_send_json_error('Failed to parse artist data: ' . $json_error . ' (Code: ' . $json_error_code . ')');
             }
         } else {
-            wp_send_json_error('Could not extract data from TypeScript file');
+            error_log('Failed to extract data from TypeScript file - regex did not match');
+            error_log('File content preview: ' . substr($file_content, 0, 500) . '...');
+            wp_send_json_error('Could not extract data from TypeScript file - pattern not found');
         }
     }
     
@@ -196,13 +216,20 @@ class UrbanTop40_ArtistCharts {
         // Remove multi-line comments
         $json_string = preg_replace('/\/\*.*?\*\//s', '', $json_string);
         
-        // Fix trailing commas
+        // Remove export statement and type annotation
+        $json_string = preg_replace('/export const the_beatlesData: ExportedArtistData = /', '', $json_string);
+        
+        // Remove trailing semicolon
+        $json_string = rtrim($json_string, ';');
+        
+        // Fix trailing commas before closing brackets/braces
         $json_string = preg_replace('/,(\s*[}\]])/m', '$1', $json_string);
         
-        // Ensure proper quote escaping
-        $json_string = str_replace('\\"', '"', $json_string);
-        $json_string = str_replace('"', '\\"', $json_string);
-        $json_string = str_replace('\\\\"', '\\"', $json_string);
+        // Handle any remaining TypeScript-specific syntax
+        $json_string = preg_replace('/:\s*ExportedArtistData\s*=\s*/', '', $json_string);
+        
+        // Clean up any extra whitespace
+        $json_string = trim($json_string);
         
         return $json_string;
     }
