@@ -243,7 +243,7 @@ class UrbanTop40_Artist_Charts {
                         .done(function(response) {
                             if (response.success) {
                                 let debugHtml = '<div style="color: blue;"><strong>Debug Information:</strong></div>';
-                                debugHtml += '<pre style="background: #fff; padding: 10px; border: 1px solid #ddd; overflow: auto; max-height: 400px;">';
+                                debugHtml += '<pre style="background: #fff; padding: 10px; border: 1px solid #ddd; overflow: auto;">';
                                 debugHtml += JSON.stringify(response.data, null, 2);
                                 debugHtml += '</pre>';
                                 resultsDiv.innerHTML = debugHtml;
