@@ -135,10 +135,11 @@
             // Process chart data to get all unique weeks and song trajectories
             const chartData = this.processChartData();
             
-            // Calculate chart dimensions
-            const chartHeight = parseInt(this.height);
+            // Calculate chart dimensions - use a reasonable width instead of massive width
+            const chartHeight = parseInt(this.height) || 400;
             const weekCount = chartData.weeks.length;
-            const chartWidth = Math.max(800, weekCount * 20); // 20px per week minimum
+            // Use a more reasonable width calculation - max 1200px, min 800px
+            const chartWidth = Math.min(1200, Math.max(800, weekCount * 15));
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
@@ -355,13 +356,6 @@
             
             const linesContainer = $('<div class="song-lines"></div>');
             
-            // Add a test SVG first to see if SVG rendering works
-            const testSvg = $('<svg width="100" height="100" style="border: 2px solid red;"></svg>');
-            const testRect = $('<rect x="10" y="10" width="80" height="80" fill="blue"></rect>');
-            testSvg.append(testRect);
-            linesContainer.append(testSvg);
-            console.log('Added test SVG:', testSvg[0]);
-            
             chartData.songs.forEach(song => {
                 console.log(`Processing song: ${song.song} with ${song.data.length} data points`);
                 if (song.data.length < 2) {
@@ -383,7 +377,8 @@
             console.log(`Creating line for song: ${song.song} with ${song.data.length} data points`);
             
             const lineContainer = $('<div class="song-line-container"></div>');
-            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" style="position: absolute; top: 0; left: 0;"></svg>`);
+            // Create SVG without position absolute and with proper dimensions
+            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none"></svg>`);
             
             // Create path for the line
             const path = $('<path></path>');
@@ -429,8 +424,7 @@
                     'd': pathData,
                     'stroke': song.color,
                     'stroke-width': '2',
-                    'fill': 'none',
-                    'stroke-dasharray': '5,5'
+                    'fill': 'none'
                 });
                 
                 svg.append(path);
