@@ -514,8 +514,9 @@
                     'font-size': '12px'
                 });
                 
-                const peakPosition = Math.min(...song.chartHistory.map(p => p.position));
-                const weeksOnChart = song.chartHistory.length;
+                // Fix: Use song.data (from trajectory) instead of song.chartHistory
+                const peakPosition = Math.min(...song.data.map(p => p.position));
+                const weeksOnChart = song.data.length;
                 songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
                 
                 songItem.append(songName);
@@ -528,7 +529,7 @@
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
-                song.chartHistory.forEach(point => {
+                song.data.forEach(point => {
                     allDates.add(point.date);
                 });
             });
@@ -545,7 +546,7 @@
                 
                 // Create data array with null values for gaps
                 const data = sortedDates.map(date => {
-                    const point = song.chartHistory.find(p => p.date === date);
+                    const point = song.data.find(p => p.date === date);
                     return point ? point.position : null;
                 });
                 
@@ -694,21 +695,7 @@
             container.append(fallbackDiv);
         }
         
-        addLegend(chartContent, songs) {
-            const legendContainer = $('<div class="chart-legend"></div>');
-            
-            songs.forEach(song => {
-                const legendItem = $(`
-                    <div class="legend-item">
-                        <span class="legend-color" style="background: ${song.color}"></span>
-                        <span class="legend-text">${song.song}</span>
-                    </div>
-                `);
-                legendContainer.append(legendItem);
-            });
-            
-            chartContent.append(legendContainer);
-        }
+
         
         addFallbackChartContent(chartContent, chartData, chartHeight, chartWidth) {
             console.log('Adding fallback chart content');

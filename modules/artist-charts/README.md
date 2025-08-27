@@ -3,11 +3,15 @@
 ## Recent Fixes (Latest Update)
 
 ### ✅ Fixed Issues
-1. **Removed "Last Updated" container** - The useless last updated display has been removed from the stats section
-2. **Fixed chart loading** - Corrected regex pattern to properly parse TypeScript data files with underscores in export names
-3. **Completely redesigned chart** - Changed from bar chart to multi-series line chart showing song performance over time
-4. **Smart X-axis labeling** - Automatically detects gaps and shows "X week gap" labels to avoid awkward blank spaces
-5. **Enhanced interactivity** - Hover over data points to see song details, click lines to highlight songs
+1. **Fixed Y-axis positioning** - Position #1 is now correctly at the top, #100 at the bottom
+2. **Shows every single week** - Every week is now displayed on the X-axis for complete chart coverage
+3. **Smart gap detection** - Automatically detects and labels gaps between chart entries (e.g., "3 week gap")
+4. **No false connections** - Songs that fall off the chart and return later are not connected with lines across the gap
+5. **Song sidebar** - Song list moved to a sidebar instead of above the chart for better organization
+6. **Removed "Last Updated" container** - The useless last updated display has been removed from the stats section
+7. **Fixed chart loading** - Corrected regex pattern to properly parse TypeScript data files with underscores in export names
+8. **Completely redesigned chart** - Changed from bar chart to multi-series line chart showing song performance over time
+9. **Enhanced interactivity** - Hover over data points to see song details, click lines to highlight songs
 
 ### 🔧 Usage
 **Important:** Use the exact filename (without .ts extension) as the artist parameter:
@@ -35,13 +39,16 @@ The Artist Charts module for Urban Top 40 provides functionality to display arti
 ## Features
 
 - **Multi-series line charts** - Each song gets its own colored line showing chart performance over time
-- **Smart X-axis labeling** - Automatically detects time gaps and shows "X week gap" labels
+- **Correct Y-axis positioning** - Position 1 at top, 100 at bottom (inverted Y-axis)
+- **Complete week coverage** - Shows every single week on the X-axis for comprehensive chart history
+- **Smart gap detection** - Automatically detects and labels time gaps between chart entries
+- **No false connections** - Lines don't connect across gaps when songs fall off and return to the chart
+- **Song sidebar** - Interactive sidebar with song list, checkboxes for visibility control, and song statistics
 - **Interactive tooltips** - Hover over data points to see song details
 - **Responsive design** - Works on all device sizes with horizontal scrolling
-- **Chart position visualization** - Position 1 at top, 100 at bottom (inverted Y-axis)
 - **TypeScript data integration** - Loads data directly from .ts files
 - **WordPress shortcode** - Easy to embed in posts and pages
-- **Color-coded legend** - Each song has a unique color for easy identification
+- **Color-coded song identification** - Each song has a unique color for easy identification
 
 ## Usage
 
