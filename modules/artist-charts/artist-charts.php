@@ -102,10 +102,19 @@ class UrbanTop40_Artist_Charts {
                 false
             );
             
+            // Enqueue Chart.js zoom plugin
+            wp_enqueue_script(
+                'chart-js-zoom',
+                'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
+                array('chart-js'),
+                '2.0.1',
+                false
+            );
+            
             wp_enqueue_script(
                 'urban-top-40-artist-charts',
                 URBAN_TOP_40_PLUGIN_URL . 'modules/artist-charts/artist-charts.js',
-                array('jquery', 'chart-js'),
+                array('jquery', 'chart-js', 'chart-js-zoom'),
                 URBAN_TOP_40_VERSION,
                 true
             );

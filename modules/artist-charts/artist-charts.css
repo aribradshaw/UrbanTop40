@@ -65,14 +65,14 @@
     margin-left: 270px;
     width: calc(100% - 270px);
     position: relative;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 0 8px 8px 0;
 }
 
-/* Chart Container */
+/* Remove excessive padding and margins */
 .chart-container {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
+    padding: 1.5rem 0 1.5rem 1.5rem;
 }
 
 .chart-header {
@@ -121,6 +121,7 @@
     height: 400px;
     padding: 1rem 0;
     display: flex;
+    overflow: hidden;
 }
 
 /* Loading State */
@@ -136,8 +137,9 @@
     position: relative;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
 }
 
 /* Chart Scroll Container */
@@ -584,4 +586,31 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Zoom Instructions */
+.zoom-instructions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.zoom-instructions:hover {
+    opacity: 1;
+}
+
+/* Chart area improvements */
+.chart-main-area canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
 }

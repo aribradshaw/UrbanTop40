@@ -373,7 +373,9 @@
             const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
                 'margin-left': '270px',
-                'width': (chartWidth - 270) + 'px'
+                'width': (chartWidth - 270) + 'px',
+                'position': 'relative',
+                'overflow': 'hidden'
             });
             
             // Create canvas for Chart.js
@@ -386,6 +388,10 @@
             });
             
             chartArea.append(canvas);
+            
+            // Add zoom instructions
+            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll to zoom • Drag to pan</div>');
+            chartArea.append(zoomInstructions);
             
             // Prepare data for Chart.js with proper gap handling
             const chartJsData = this.prepareChartJsData(chartData);
@@ -654,6 +660,21 @@
                                 bodyColor: 'rgba(255, 255, 255, 0.8)',
                                 borderColor: 'rgba(255, 255, 255, 0.2)',
                                 borderWidth: 1
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true,
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'xy',
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'xy',
+                                }
                             }
                         },
                         interaction: {
