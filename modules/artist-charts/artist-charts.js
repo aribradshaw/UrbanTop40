@@ -664,7 +664,7 @@
                                 },
                                 ticks: {
                                     color: 'rgba(255, 255, 255, 0.9)',
-                                    reverse: false, // 1 at top, 100 at bottom
+                                    reverse: true, // 1 at top, 100 at bottom
                                     font: {
                                         size: 16,
                                         weight: '600'
