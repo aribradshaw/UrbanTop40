@@ -438,6 +438,16 @@ class UrbanTop40_Artist_Charts {
         
         // First, try to find any export const that ends with 'Data'
         $data_pattern = '/export const (\w+Data)\s*=\s*({.*?});/s';
+        
+        // Debug: Check what we're looking for
+        $debug_info = array(
+            'pattern' => $data_pattern,
+            'file_size' => $file_size,
+            'first_100' => $first_100_chars,
+            'last_100' => $last_100_chars,
+            'regex_result' => preg_match($data_pattern, $ts_content, $matches)
+        );
+        
         if (preg_match($data_pattern, $ts_content, $matches)) {
             $export_name = $matches[1];
             $json_data = $matches[2];
@@ -450,13 +460,13 @@ class UrbanTop40_Artist_Charts {
             $artist_data = json_decode($json_data, true);
             
             if ($artist_data === null) {
-                wp_send_json_error('Unable to parse artist data. JSON decode failed. Export name found: ' . $export_name);
+                wp_send_json_error('Unable to parse artist data. JSON decode failed. Export name found: ' . $export_name . '. JSON data: ' . substr($json_data, 0, 200));
             }
             
             wp_send_json_success($artist_data);
         } else {
-            // Try to find export default with the data
-            $default_pattern = '/export const (\w+Data)\s*=\s*({.*?});\s*export default \1;/s';
+            // Try to find export default with the data - simpler approach
+            $default_pattern = '/export const (\w+Data)\s*=\s*({.*?});/s';
             if (preg_match($default_pattern, $ts_content, $matches)) {
                 $export_name = $matches[1];
                 $json_data = $matches[2];
@@ -493,7 +503,7 @@ class UrbanTop40_Artist_Charts {
                     
                     wp_send_json_success($artist_data);
                 } else {
-                    wp_send_json_error('Unable to extract artist data from file. No matching export pattern found. File size: ' . $file_size . ' bytes. First 100 chars: ' . $first_100_chars . '... Last 100 chars: ...' . $last_100_chars);
+                    wp_send_json_error('Unable to extract artist data from file. No matching export pattern found. Debug info: ' . json_encode($debug_info));
                 }
             }
         }
