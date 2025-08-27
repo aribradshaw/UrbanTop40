@@ -11,7 +11,7 @@
         constructor(container) {
             this.container = container;
             this.artist = container.data('artist');
-            this.height = container.data('height') || 400;
+            this.height = container.data('height') || 200;
             this.width = container.data('width') || '100%';
             this.showLegend = container.data('show-legend') === 'true';
             this.chartType = container.data('chart-type') || 'line';
