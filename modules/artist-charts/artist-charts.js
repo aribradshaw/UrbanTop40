@@ -355,6 +355,13 @@
             
             const linesContainer = $('<div class="song-lines"></div>');
             
+            // Add a test SVG first to see if SVG rendering works
+            const testSvg = $('<svg width="100" height="100" style="border: 2px solid red;"></svg>');
+            const testRect = $('<rect x="10" y="10" width="80" height="80" fill="blue"></rect>');
+            testSvg.append(testRect);
+            linesContainer.append(testSvg);
+            console.log('Added test SVG:', testSvg[0]);
+            
             chartData.songs.forEach(song => {
                 console.log(`Processing song: ${song.song} with ${song.data.length} data points`);
                 if (song.data.length < 2) {
@@ -368,6 +375,8 @@
             
             chartContent.append(linesContainer);
             console.log('Finished drawing song lines');
+            console.log('Lines container HTML:', linesContainer.html());
+            console.log('Chart content HTML:', chartContent.html());
         }
         
         createSongLine(song, weeks, chartHeight, chartWidth) {
