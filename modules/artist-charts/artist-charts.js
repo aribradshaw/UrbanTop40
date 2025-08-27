@@ -353,12 +353,18 @@
         }
         
         drawSongLines(chartContent, chartData, chartHeight, chartWidth) {
-            console.log('Drawing song lines...');
+            console.log('Drawing song lines with Chart.js approach...');
             console.log('Chart data:', chartData);
             
-            const linesContainer = $('<div class="song-lines"></div>');
+            // Create a canvas element for Chart.js
+            const canvas = $('<canvas></canvas>');
+            canvas.attr('width', chartWidth);
+            canvas.attr('height', chartHeight);
+            canvas.css({
+                'width': chartWidth + 'px',
+                'height': chartHeight + 'px'
+            });
             
-            // Create a single chart area that will contain all songs
             const chartArea = $('<div class="chart-area"></div>');
             chartArea.css({
                 'width': chartWidth + 'px',
@@ -368,85 +374,173 @@
                 'background': 'rgba(0, 0, 0, 0.1)'
             });
             
-            chartData.songs.forEach(song => {
-                console.log(`Processing song: ${song.song} with ${song.data.length} data points`);
-                if (song.data.length < 2) {
-                    console.log(`Skipping ${song.song} - need at least 2 points for a line`);
-                    return;
-                }
-                
-                this.createSongLineInArea(chartArea, song, chartData.weeks, chartHeight, chartWidth);
-            });
+            chartArea.append(canvas);
             
-            linesContainer.append(chartArea);
-            chartContent.append(linesContainer);
-            console.log('Finished drawing song lines with single chart area');
+            // Prepare data for Chart.js
+            const chartJsData = this.prepareChartJsData(chartData);
+            console.log('Chart.js data prepared:', chartJsData);
+            
+            // Create the chart
+            this.createChartJsChart(canvas[0], chartJsData, chartWidth, chartHeight);
+            
+            chartContent.append(chartArea);
+            console.log('Finished drawing song lines with Chart.js');
         }
         
-        createSongLineInArea(chartArea, song, weeks, chartHeight, chartWidth) {
-            console.log(`Creating line for song: ${song.song} with ${song.data.length} data points`);
-            
-            // Create SVG directly in the chart area
-            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none" style="background: rgba(255, 0, 0, 0.1); border: 1px solid yellow;"></svg>`);
-            
-            console.log('Created SVG element:', svg[0]);
-            console.log('SVG dimensions:', { width: chartWidth, height: chartHeight });
-            
-            // Create path for the line
-            const path = $('<path></path>');
-            let pathData = '';
-            let validPoints = 0;
-            
-            song.data.forEach((point, index) => {
-                const weekIndex = weeks.findIndex(w => w.date === point.date);
-                if (weekIndex === -1) {
-                    console.log(`Week not found for date: ${point.date}`);
-                    return;
-                }
-                
-                const x = (weekIndex / (weeks.length - 1)) * chartWidth;
-                // Corrected Y-axis calculation: 1 at top (low Y), 100 at bottom (high Y)
-                const y = (point.position / 100) * chartHeight;
-                
-                console.log(`Point ${index}: date=${point.date}, position=${point.position}, x=${x}, y=${y}`);
-                
-                if (index === 0) {
-                    pathData += `M ${x} ${y}`;
-                } else {
-                    pathData += ` L ${x} ${y}`;
-                }
-                validPoints++;
-                
-                // Add data point marker
-                const marker = $('<circle r="3" fill="${song.color}"></circle>');
-                marker.attr({
-                    'cx': x,
-                    'cy': y,
-                    'data-song': song.song,
-                    'data-position': point.position,
-                    'data-date': point.date
+        prepareChartJsData(chartData) {
+            // Get all unique dates and sort them
+            const allDates = new Set();
+            chartData.songs.forEach(song => {
+                song.data.forEach(point => {
+                    allDates.add(point.date);
                 });
-                svg.append(marker);
             });
             
-            console.log(`Path data for ${song.song}: ${pathData}`);
-            console.log(`Valid points: ${validPoints}`);
+            const sortedDates = Array.from(allDates).sort();
+            console.log('Sorted dates:', sortedDates);
             
-            if (validPoints > 1) {
-                path.attr({
-                    'd': pathData,
-                    'stroke': song.color,
-                    'stroke-width': '3',
-                    'fill': 'none'
-                });
+            // Create datasets for each song
+            const datasets = chartData.songs.map((song, index) => {
+                const colors = [
+                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+                ];
                 
-                svg.append(path);
-                console.log('Added path to SVG:', path[0]);
+                return {
+                    label: song.song,
+                    data: sortedDates.map(date => {
+                        const point = song.data.find(p => p.date === date);
+                        return point ? point.position : null;
+                    }),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length],
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    fill: false,
+                    tension: 0.1,
+                    spanGaps: true
+                };
+            });
+            
+            return {
+                labels: sortedDates.map(date => this.formatWeekLabel(date)),
+                datasets: datasets
+            };
+        }
+        
+        createChartJsChart(canvas, data, width, height) {
+            // Check if Chart.js is available
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded');
+                // Fallback to simple HTML display
+                this.createSimpleChartFallback(canvas, data);
+                return;
             }
             
-            // Add this SVG directly to the chart area
-            chartArea.append(svg);
-            console.log('Added SVG to chart area');
+            try {
+                const ctx = canvas.getContext('2d');
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Week',
+                                    color: 'rgba(255, 255, 255, 0.8)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Chart Position',
+                                    color: 'rgba(255, 255, 255, 0.8)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    reverse: true, // 1 at top, 100 at bottom
+                                    callback: function(value) {
+                                        return value;
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                min: 1,
+                                max: 100
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: 'rgba(255, 255, 255, 0.9)',
+                                bodyColor: 'rgba(255, 255, 255, 0.8)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+                
+                console.log('Chart.js chart created successfully');
+                
+            } catch (error) {
+                console.error('Error creating Chart.js chart:', error);
+                this.createSimpleChartFallback(canvas, data);
+            }
+        }
+        
+        createSimpleChartFallback(canvas, data) {
+            console.log('Creating simple chart fallback');
+            
+            const container = $(canvas).parent();
+            container.empty();
+            
+            const fallbackDiv = $('<div class="simple-chart-fallback"></div>');
+            fallbackDiv.css({
+                'padding': '20px',
+                'text-align': 'center',
+                'color': 'rgba(255, 255, 255, 0.8)'
+            });
+            
+            fallbackDiv.html(`
+                <h3>Chart Data</h3>
+                <p>${data.datasets.length} songs with chart history</p>
+                <p>${data.labels.length} unique weeks</p>
+                <p><em>Chart.js not available. Using fallback display.</em></p>
+            `);
+            
+            container.append(fallbackDiv);
         }
         
         addLegend(chartContent, songs) {
