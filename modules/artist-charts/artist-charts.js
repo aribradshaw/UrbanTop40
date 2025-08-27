@@ -176,8 +176,8 @@
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
                 const label = $(`<div class="y-axis-label">${position}</div>`);
-                // ROBUST Y-axis positioning: 1 at top (0%), 100 at bottom (100%)
-                const yPos = (position - 1) / 99 * 100; // 1->0%, 100->100%
+                // INVERTED Y-axis positioning: 100 at top (0%), 1 at bottom (100%)
+                const yPos = (100 - position) / 99 * 100; // 100->0%, 1->100%
                 label.css('top', yPos + '%');
                 yAxisLabels.append(label);
             });
@@ -306,8 +306,8 @@
             // Horizontal grid lines for chart positions
             const positions = [1, 25, 50, 75, 100];
             positions.forEach(position => {
-                // ROBUST grid line positioning: 1 at top (0), 100 at bottom (chartHeight)
-                const yPos = (position - 1) / 99 * chartHeight; // 1->0, 100->chartHeight
+                // INVERTED grid line positioning: 100 at top (0), 1 at bottom (chartHeight)
+                const yPos = (100 - position) / 99 * chartHeight; // 100->0, 1->chartHeight
                 const line = $('<div class="grid-line horizontal"></div>');
                 line.css({
                     'position': 'absolute',
@@ -650,7 +650,7 @@
                                 },
                                 ticks: {
                                     color: 'rgba(255, 255, 255, 0.7)',
-                                    reverse: false, // 1 at top, 100 at bottom (NO REVERSE)
+                                    reverse: true, // 100 at top, 1 at bottom (INVERTED)
                                     callback: function(value) {
                                         return value;
                                     }
