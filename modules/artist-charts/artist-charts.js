@@ -415,7 +415,7 @@
                 'position': 'relative',
                 'overflow': 'hidden',
                 'min-width': '600px',
-                'min-height': Math.floor(chartHeight * 0.67) + 'px' // Chart takes 2/3 of height
+                'min-height': '400px' // Ensure minimum chart height
             });
             
             // Create scrollable container for proper horizontal scrolling
@@ -433,11 +433,13 @@
             // Create canvas with better sizing and spacing
             const canvas = $('<canvas></canvas>');
             const actualChartWidth = Math.max(1000, weekCount * 30); // More space per week
+            const actualChartHeight = Math.max(400, Math.floor(chartHeight * 0.67)); // Ensure minimum height
+            
             canvas.attr('width', actualChartWidth);
-            canvas.attr('height', Math.floor(chartHeight * 0.67)); // Chart takes 2/3 of height
+            canvas.attr('height', actualChartHeight);
             canvas.css({
                 'width': actualChartWidth + 'px',
-                'height': Math.floor(chartHeight * 0.67) + 'px',
+                'height': actualChartHeight + 'px',
                 'display': 'block',
                 'margin': '20px'
             });
@@ -469,43 +471,14 @@
                 sampleLabels: chartJsData.labels.slice(0, 5)
             });
             
-            // Debug: Check the processed chart data structure
-            console.log('Processed chart data structure:', {
-                weeksCount: chartData.weeks.length,
-                songsCount: chartData.songs.length,
-                firstSong: chartData.songs[0],
-                firstSongDataPoints: chartData.songs[0]?.data?.length
-            });
-            
-            // Debug: Check if chart data is valid
-            if (chartJsData.datasets.length === 0) {
-                console.error('No datasets found in chart data!');
-                console.error('Chart data:', chartJsData);
-                return;
-            }
-            
-            // Debug: Check first dataset
-            const firstDataset = chartJsData.datasets[0];
-            console.log('First dataset:', firstDataset);
-            console.log('First dataset data points:', firstDataset.data);
-            console.log('First dataset non-null points:', firstDataset.data.filter(p => p !== null));
-            
-            // Debug: Check if we have valid position data
-            const validPositions = firstDataset.data.filter(p => p !== null && p >= 1 && p <= 100);
-            console.log('Valid positions (1-100):', validPositions);
+
             
 
             
             // Ensure Chart.js is loaded before creating chart
             this.waitForChartJs(() => {
                 console.log('Chart.js loaded, creating chart...');
-                console.log('About to create chart with:', {
-                    canvas: canvas[0],
-                    data: chartJsData,
-                    width: actualChartWidth,
-                    height: Math.floor(chartHeight * 0.67)
-                });
-                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, Math.floor(chartHeight * 0.67));
+                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, actualChartHeight);
             });
             
             // Create song list at the bottom - 1/3 of container height
@@ -618,19 +591,15 @@
         }
         
         prepareChartJsData(chartData) {
-            console.log('Preparing Chart.js data with:', chartData);
-            
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
-                console.log('Processing song for chart:', song.song, 'with data:', song.data);
                 song.data.forEach(point => {
                     allDates.add(point.date);
                 });
             });
             
             const sortedDates = Array.from(allDates).sort();
-            console.log('Sorted dates for chart:', sortedDates);
             
             // Create datasets for each song with proper gap handling
             const datasets = chartData.songs.map((song, index) => {
@@ -643,13 +612,6 @@
                 const data = sortedDates.map(date => {
                     const point = song.data.find(p => p.date === date);
                     return point ? point.position : null;
-                });
-                
-                console.log(`Dataset ${index} for ${song.song}:`, {
-                    label: song.song,
-                    dataLength: data.length,
-                    nonNullData: data.filter(p => p !== null).length,
-                    sampleData: data.filter(p => p !== null).slice(0, 5)
                 });
                 
                 return {
@@ -845,11 +807,6 @@
                 });
                 
                 console.log('Chart.js chart created successfully');
-                console.log('Chart instance:', chart);
-                console.log('Chart canvas:', chart.canvas);
-                console.log('Chart canvas dimensions:', { width: chart.canvas.width, height: chart.canvas.height });
-                console.log('Chart data:', chart.data);
-                console.log('Chart options:', chart.options);
                 this.chartInstance = chart;
                 
                 // Set initial zoom level - start with reasonable zoom
