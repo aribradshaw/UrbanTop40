@@ -379,8 +379,11 @@
             console.log(`Creating line for song: ${song.song} with ${song.data.length} data points`);
             
             const lineContainer = $('<div class="song-line-container"></div>');
-            // Create SVG without position absolute and with proper dimensions
-            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none"></svg>`);
+            // Create SVG with visible background for debugging
+            const svg = $(`<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none" style="background: rgba(255, 0, 0, 0.1); border: 1px solid yellow;"></svg>`);
+            
+            console.log('Created SVG element:', svg[0]);
+            console.log('SVG dimensions:', { width: chartWidth, height: chartHeight });
             
             // Create path for the line
             const path = $('<path></path>');
@@ -426,14 +429,17 @@
                 path.attr({
                     'd': pathData,
                     'stroke': song.color,
-                    'stroke-width': '2',
+                    'stroke-width': '3',
                     'fill': 'none'
                 });
                 
                 svg.append(path);
+                console.log('Added path to SVG:', path[0]);
             }
             
             lineContainer.append(svg);
+            console.log('Final line container:', lineContainer[0]);
+            console.log('Final SVG in container:', lineContainer.find('svg')[0]);
             return lineContainer;
         }
         
