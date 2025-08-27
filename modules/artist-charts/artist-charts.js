@@ -403,7 +403,7 @@
             
             // Calculate week count from chart data
             const weekCount = chartData.weeks ? chartData.weeks.length : chartData.songs.reduce((max, song) => {
-                return Math.max(max, song.data.length);
+                return Math.max(max, song.chartHistory.length);
             }, 0);
             
             console.log('Week count calculated:', weekCount);
@@ -417,6 +417,7 @@
                 'background': 'rgba(0, 0, 0, 0.1)',
                 'border-right': '1px solid rgba(255, 255, 255, 0.2)',
                 'height': chartHeight + 'px',
+                'min-height': '600px',
                 'overflow-y': 'auto',
                 'min-width': '250px'
             });
@@ -431,7 +432,8 @@
                 'width': 'calc(75% - 20px)',
                 'position': 'relative',
                 'overflow': 'hidden',
-                'min-width': '600px'
+                'min-width': '600px',
+                'min-height': chartHeight + 'px'
             });
             
             // Create scrollable container for proper horizontal scrolling
@@ -469,6 +471,14 @@
             // Prepare data for Chart.js with proper gap handling
             const chartJsData = this.prepareChartJsData(chartData);
             console.log('Chart.js data prepared with gaps:', chartJsData);
+            console.log('Chart.js data structure:', {
+                labelsCount: chartJsData.labels.length,
+                datasetsCount: chartJsData.datasets.length,
+                firstDataset: chartJsData.datasets[0],
+                sampleLabels: chartJsData.labels.slice(0, 5)
+            });
+            
+
             
             // Ensure Chart.js is loaded before creating chart
             this.waitForChartJs(() => {
@@ -534,9 +544,9 @@
                     'font-size': '12px'
                 });
                 
-                // Fix: Use song.data (from trajectory) instead of song.chartHistory
-                const peakPosition = Math.min(...song.data.map(p => p.position));
-                const weeksOnChart = song.data.length;
+                // Use song.chartHistory from the actual data structure
+                const peakPosition = Math.min(...song.chartHistory.map(p => p.position));
+                const weeksOnChart = song.chartHistory.length;
                 songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
                 
                 songItem.append(songName);
@@ -549,7 +559,7 @@
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
-                song.data.forEach(point => {
+                song.chartHistory.forEach(point => {
                     allDates.add(point.date);
                 });
             });
@@ -566,7 +576,7 @@
                 
                 // Create data array with null values for gaps
                 const data = sortedDates.map(date => {
-                    const point = song.data.find(p => p.date === date);
+                    const point = song.chartHistory.find(p => p.date === date);
                     return point ? point.position : null;
                 });
                 
@@ -587,7 +597,7 @@
                 };
             });
             
-            // Create labels with gap indicators
+            // Create labels with actual week dates instead of index numbers
             const labels = sortedDates.map((date, index) => {
                 if (index === 0) return this.formatWeekLabel(date);
                 
@@ -652,11 +662,11 @@
                                         return index % 3 === 0 ? value : '';
                                     }
                                 },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.25)',
-                                lineWidth: 1
-                            }
-                        },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.25)',
+                                    lineWidth: 1
+                                }
+                            },
                             y: {
                                 display: true,
                                 title: {
@@ -719,63 +729,67 @@
                                     }
                                 }
                             },
-                            zoom: {
-                                                            zoom: {
-                                wheel: {
-                                    enabled: true,
-                                    speed: 0.05
-                                },
-                                pinch: {
-                                    enabled: false
-                                },
-                                mode: 'x'
-                            },
-                                pan: {
-                                    enabled: true,
-                                    mode: 'x'
-                                },
-                                limits: {
-                                    x: {
-                                        min: 'original',
-                                        max: 'original'
-                                    },
-                                    y: {
-                                        min: 1,
-                                        max: 100
-                                    }
-                                }
-                            }
+                            // Temporarily disabled zoom plugin to fix chart display
+                            // zoom: {
+                            //     wheel: {
+                            //         enabled: true,
+                            //         speed: 0.05
+                            //     },
+                            //     pinch: {
+                            //         enabled: false
+                            //     },
+                            //     mode: 'x'
+                            // },
+                            // pan: {
+                            //     enabled: true,
+                            //     mode: 'x'
+                            // },
+                            // limits: {
+                            //     x: {
+                            //         min: 'original',
+                            //         max: 'original'
+                            //     },
+                            //     y: {
+                            //         min: 1,
+                            //         max: 100
+                            //     }
+                            // }
                         },
                         interaction: {
                             mode: 'nearest',
                             axis: 'x',
                             intersect: false
                         },
-                        onZoom: function() {
-                            // Ensure Y-axis stays fixed at 1-100 after zoom
-                            this.scales.y.min = 1;
-                            this.scales.y.max = 100;
-                        },
-                        onPan: function() {
-                            // Ensure Y-axis stays fixed at 1-100 after pan
-                            this.scales.y.min = 1;
-                            this.scales.y.max = 100;
-                        }
+                        // Zoom event handlers temporarily disabled
+                        // onZoom: function() {
+                        //     // Ensure Y-axis stays fixed at 1-100 after zoom
+                        //     this.scales.y.min = 1;
+                        //     this.scales.y.max = 100;
+                        // },
+                        // onPan: function() {
+                        //     // Ensure Y-axis stays fixed at 1-100 after pan
+                        //     this.scales.y.max = 100;
+                        // }
                     }
                 });
                 
-                console.log('BULLETPROOF Chart.js chart created successfully');
+                console.log('Chart.js chart created successfully');
                 this.chartInstance = chart;
                 
+                // Zoom functionality temporarily disabled
                 // Set initial zoom level - start with reasonable zoom
-                setTimeout(() => {
-                    if (chart.zoom) {
-                        chart.zoom.zoom({
-                            x: 1.5, // Start 1.5x zoomed in for better readability
-                            y: 1    // No vertical zoom
-                        });
-                    }
-                }, 100);
+                // setTimeout(() => {
+                //     if (chart.zoom && chart.zoom.zoom) {
+                //         try {
+                //             chart.zoom.zoom({
+                //                 x: 1.5, // Start 1.5x zoomed in for better readability
+                //                 y: 1    // No vertical zoom
+                //             });
+                //         } catch (zoomError) {
+                //             console.log('Zoom not available, continuing without initial zoom');
+                //         }
+                //     }
+                // }, 100);
                 
             } catch (error) {
                 console.error('Error creating Chart.js chart:', error);
