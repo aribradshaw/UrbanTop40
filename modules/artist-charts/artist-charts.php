@@ -20,8 +20,10 @@ class UrbanTop40_Artist_Charts {
      * Constructor
      */
     public function __construct() {
-        // Register shortcode
+        // Register shortcodes
         add_shortcode('artist_chart', array($this, 'artist_chart_shortcode'));
+        add_shortcode('artist_stats', array($this, 'artist_stats_shortcode'));
+        add_shortcode('artist_songs', array($this, 'artist_songs_shortcode'));
         
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
@@ -41,9 +43,73 @@ class UrbanTop40_Artist_Charts {
     }
     
     /**
+     * Artist Stats Shortcode
+     * 
+     * Usage: [artist_stats artist="the_beatles_data"]
+     * Displays: Total songs, number ones, total weeks
+     */
+    public function artist_stats_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'artist' => '',
+            'style' => 'cards' // cards, inline, minimal
+        ), $atts);
+        
+        if (empty($atts['artist'])) {
+            return '<p>Error: Artist parameter is required. Usage: [artist_stats artist="the_beatles_data"]</p>';
+        }
+        
+        // Generate unique ID for this stats section
+        $stats_id = 'artist-stats-' . sanitize_title($atts['artist']) . '-' . uniqid();
+        
+        $output = '<div class="urban-top-40-artist-stats" id="' . esc_attr($stats_id) . '" ';
+        $output .= 'data-artist="' . esc_attr($atts['artist']) . '" ';
+        $output .= 'data-style="' . esc_attr($atts['style']) . '">';
+        $output .= '<div class="stats-loading">Loading stats...</div>';
+        $output .= '<div class="stats-container" style="display: none;"></div>';
+        $output .= '</div>';
+        
+        return $output;
+    }
+    
+    /**
+     * Artist Songs Shortcode
+     * 
+     * Usage: [artist_songs artist="the_beatles_data"]
+     * Displays: List of songs with peak positions and weeks on chart
+     */
+    public function artist_songs_shortcode($atts) {
+        $atts = shortcode_atts(array(
+            'artist' => '',
+            'layout' => 'grid', // grid, list, horizontal
+            'show_peak' => 'true',
+            'show_weeks' => 'true',
+            'max_songs' => '50'
+        ), $atts);
+        
+        if (empty($atts['artist'])) {
+            return '<p>Error: Artist parameter is required. Usage: [artist_songs artist="the_beatles_data"]</p>';
+        }
+        
+        // Generate unique ID for this songs section
+        $songs_id = 'artist-songs-' . sanitize_title($atts['artist']) . '-' . uniqid();
+        
+        $output = '<div class="urban-top-40-artist-songs" id="' . esc_attr($songs_id) . '" ';
+        $output .= 'data-artist="' . esc_attr($atts['artist']) . '" ';
+        $output .= 'data-layout="' . esc_attr($atts['layout']) . '" ';
+        $output .= 'data-show-peak="' . esc_attr($atts['show_peak']) . '" ';
+        $output .= 'data-show-weeks="' . esc_attr($atts['show_weeks']) . '" ';
+        $output .= 'data-max-songs="' . esc_attr($atts['max_songs']) . '">';
+        $output .= '<div class="songs-loading">Loading songs...</div>';
+        $output .= '<div class="songs-container" style="display: none;"></div>';
+        $output .= '</div>';
+        
+        return $output;
+    }
+    
+    /**
      * Artist Chart Shortcode
      * 
-     * Usage: [artist_chart artist="the_beatles" height="400" width="100%"]
+     * Usage: [artist_chart artist="the_beatles_data" height="400" width="100%"]
      */
     public function artist_chart_shortcode($atts) {
         $atts = shortcode_atts(array(
@@ -54,9 +120,9 @@ class UrbanTop40_Artist_Charts {
             'chart_type' => 'line' // line, area, bar
         ), $atts);
         
-                 if (empty($atts['artist'])) {
-             return '<p>Error: Artist parameter is required. Usage: [artist_chart artist="the_beatles_data"]</p>';
-         }
+        if (empty($atts['artist'])) {
+            return '<p>Error: Artist parameter is required. Usage: [artist_chart artist="the_beatles_data"]</p>';
+        }
         
         // Generate unique ID for this chart
         $chart_id = 'artist-chart-' . sanitize_title($atts['artist']) . '-' . uniqid();
@@ -92,7 +158,7 @@ class UrbanTop40_Artist_Charts {
     public function enqueue_frontend_assets() {
         // Only load if shortcode is present on the page
         global $post;
-        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'artist_chart')) {
+        if (is_a($post, 'WP_Post') && (has_shortcode($post->post_content, 'artist_chart') || has_shortcode($post->post_content, 'artist_stats') || has_shortcode($post->post_content, 'artist_songs'))) {
             // Enqueue Chart.js from CDN - MUST load in footer
             wp_enqueue_script(
                 'chart-js',

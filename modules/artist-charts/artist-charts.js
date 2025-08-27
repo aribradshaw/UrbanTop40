@@ -973,10 +973,21 @@
         }
     }
     
-    // Initialize charts when DOM is ready
+    // Initialize all components on the page
     $(document).ready(function() {
+        // Initialize artist charts
         $('.urban-top-40-artist-chart').each(function() {
             new ArtistChart($(this));
+        });
+        
+        // Initialize artist stats
+        $('.urban-top-40-artist-stats').each(function() {
+            new ArtistStats($(this));
+        });
+        
+        // Initialize artist songs
+        $('.urban-top-40-artist-songs').each(function() {
+            new ArtistSongs($(this));
         });
     });
     

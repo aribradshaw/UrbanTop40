@@ -691,3 +691,76 @@
     width: 100% !important;
     max-height: 500px;
 }
+
+/* Artist Stats Shortcode Styles */
+.urban-top-40-artist-stats {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.stats-grid {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stats-grid .stat-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 120px;
+}
+
+.stats-grid .stat-number {
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.stats-grid .stat-label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+}
+
+/* Artist Songs Shortcode Styles */
+.urban-top-40-artist-songs {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.songs-horizontal-scroll {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.song-item-horizontal {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid;
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.song-item-horizontal .song-name {
+    font-weight: bold;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.song-item-horizontal .song-peak,
+.song-item-horizontal .song-weeks {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    margin-bottom: 4px;
+}
