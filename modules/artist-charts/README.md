@@ -1,5 +1,34 @@
 # Artist Charts Module
 
+## Recent Fixes (Latest Update)
+
+### ✅ Fixed Issues
+1. **Removed "Last Updated" container** - The useless last updated display has been removed from the stats section
+2. **Fixed chart loading** - Corrected regex pattern to properly parse TypeScript data files with underscores in export names
+3. **Fixed chart rendering bugs** - Corrected chart bar positioning and label placement
+4. **Added debugging** - Enhanced console logging to help troubleshoot any remaining issues
+
+### 🔧 Usage
+**Important:** Use the exact filename (without .ts extension) as the artist parameter:
+
+```php
+[artist_chart artist="the_beatles_data"]
+```
+
+**NOT:**
+```php
+[artist_chart artist="the_beatles"]  // ❌ This won't work
+```
+
+### 🐛 Troubleshooting
+If the chart still doesn't load:
+
+1. **Check browser console** for JavaScript errors
+2. **Verify the shortcode parameter** matches the exact filename
+3. **Use the debug test page** at `debug-test.html` to test functionality
+4. **Check WordPress admin** → Urban Top 40 → Artist Charts for available artists
+5. **Verify file permissions** on the TypeScript data files
+
 The Artist Charts module for Urban Top 40 provides functionality to display artist chart history using TypeScript data files. It creates horizontally-scrollable charts that show the peak chart positions of an artist's songs, with position 1 at the top and 100 at the bottom.
 
 ## Features

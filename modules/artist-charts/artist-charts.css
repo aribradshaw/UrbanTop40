@@ -113,16 +113,23 @@
     position: relative;
     min-width: 100%;
     height: 400px;
+    padding: 1rem 0;
+}
+
+/* Chart Bars Container */
+.chart-bars-container {
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    padding: 1rem 0;
+    height: 100%;
+    position: relative;
 }
 
 /* Chart Bars */
 .chart-bar {
     flex: 1;
     min-width: 8px;
+    min-height: 2px; /* Ensure bars are visible even with very low positions */
     background: linear-gradient(to top, #ff6b6b, #ffa500);
     border-radius: 4px 4px 0 0;
     position: relative;

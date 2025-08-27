@@ -35,6 +35,8 @@
         loadChartData() {
             const self = this;
             
+            console.log('Loading chart data for artist:', this.artist);
+            
             $.ajax({
                 url: urbanTop40Charts.ajaxurl,
                 type: 'POST',
@@ -44,6 +46,7 @@
                     nonce: urbanTop40Charts.nonce
                 },
                 success: function(response) {
+                    console.log('AJAX response:', response);
                     if (response.success) {
                         self.chartData = response.data;
                         self.renderChart();
@@ -51,13 +54,16 @@
                         self.showError(response.data || 'Failed to load chart data');
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', { xhr, status, error });
                     self.showError('Network error occurred while loading chart data');
                 }
             });
         }
         
         renderChart() {
+            console.log('Rendering chart with data:', this.chartData);
+            
             if (!this.chartData || !this.chartData.songs) {
                 this.showError('No chart data available');
                 return;
@@ -109,20 +115,13 @@
                     <span class="stat-label">Top 10 Hits</span>
                 </div>
             `);
-            
-            // Last updated
-            const lastUpdated = new Date(this.chartData.lastUpdated).toLocaleDateString();
-            stats.append(`
-                <div class="stat-item">
-                    <span class="stat-value">${lastUpdated}</span>
-                    <span class="stat-label">Last Updated</span>
-                </div>
-            `);
         }
         
         renderChartContent() {
             const chartContent = this.container.find('.chart-content');
             chartContent.empty();
+            
+            console.log('Rendering chart content with songs:', this.chartData.songs);
             
             // Add Y-axis labels (1 at top, 100 at bottom)
             this.addYAxisLabels(chartContent);
@@ -135,15 +134,29 @@
             const songCount = sortedSongs.length;
             const barWidth = Math.max(8, Math.min(20, 800 / songCount)); // Responsive bar width
             
+            console.log('Chart dimensions:', { chartHeight, songCount, barWidth });
+            
             // Set minimum width for scrollable content
             const minWidth = Math.max(800, songCount * (barWidth + 2));
             chartContent.css('min-width', minWidth + 'px');
             
+            // Create chart bars container
+            const barsContainer = $('<div class="chart-bars-container"></div>');
+            barsContainer.css({
+                'display': 'flex',
+                'align-items': 'flex-end',
+                'gap': '2px',
+                'height': '100%',
+                'position': 'relative'
+            });
+            
             // Create chart bars
             sortedSongs.forEach((song, index) => {
                 const bar = this.createChartBar(song, index, barWidth, chartHeight);
-                chartContent.append(bar);
+                barsContainer.append(bar);
             });
+            
+            chartContent.append(barsContainer);
             
             // Add song labels
             this.addSongLabels(chartContent, sortedSongs, barWidth);
@@ -172,6 +185,8 @@
             const heightPercentage = ((101 - song.peakPosition) / 100) * 100;
             const barHeight = (heightPercentage / 100) * chartHeight;
             
+            console.log(`Creating bar for ${song.song}: peak=${song.peakPosition}, height=${barHeight}px, width=${barWidth}px`);
+            
             bar.css({
                 'width': barWidth + 'px',
                 'height': barHeight + 'px',
@@ -199,7 +214,7 @@
                 positionLabel.css({
                     'left': (index * (barWidth + 2) + barWidth / 2) + 'px'
                 });
-                chartContent.append(positionLabel);
+                this.container.find('.chart-content').append(positionLabel);
             }
             
             return bar;
