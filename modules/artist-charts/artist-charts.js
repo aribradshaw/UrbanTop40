@@ -477,11 +477,34 @@
                 firstSongDataPoints: chartData.songs[0]?.data?.length
             });
             
+            // Debug: Check if chart data is valid
+            if (chartJsData.datasets.length === 0) {
+                console.error('No datasets found in chart data!');
+                console.error('Chart data:', chartJsData);
+                return;
+            }
+            
+            // Debug: Check first dataset
+            const firstDataset = chartJsData.datasets[0];
+            console.log('First dataset:', firstDataset);
+            console.log('First dataset data points:', firstDataset.data);
+            console.log('First dataset non-null points:', firstDataset.data.filter(p => p !== null));
+            
+            // Debug: Check if we have valid position data
+            const validPositions = firstDataset.data.filter(p => p !== null && p >= 1 && p <= 100);
+            console.log('Valid positions (1-100):', validPositions);
+            
 
             
             // Ensure Chart.js is loaded before creating chart
             this.waitForChartJs(() => {
                 console.log('Chart.js loaded, creating chart...');
+                console.log('About to create chart with:', {
+                    canvas: canvas[0],
+                    data: chartJsData,
+                    width: actualChartWidth,
+                    height: Math.floor(chartHeight * 0.67)
+                });
                 this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, Math.floor(chartHeight * 0.67));
             });
             
@@ -523,9 +546,9 @@
             const songGrid = $('<div class="song-grid"></div>');
             songGrid.css({
                 'display': 'grid',
-                'grid-template-columns': 'repeat(auto-fill, minmax(200px, 1fr))',
-                'gap': '15px',
-                'max-height': 'calc(100% - 60px)', // Account for title height
+                'grid-template-columns': 'repeat(auto-fill, minmax(150px, 1fr))',
+                'gap': '8px',
+                'max-height': 'calc(100% - 50px)', // Account for title height
                 'overflow-y': 'auto'
             });
             
@@ -537,13 +560,13 @@
                 
                 const songItem = $('<div class="song-item"></div>');
                 songItem.css({
-                    'padding': '12px',
+                    'padding': '8px',
                     'background': 'rgba(255, 255, 255, 0.05)',
-                    'border-radius': '8px',
-                    'border-left': '4px solid ' + colors[index % colors.length],
+                    'border-radius': '6px',
+                    'border-left': '3px solid ' + colors[index % colors.length],
                     'cursor': 'pointer',
                     'transition': 'all 0.2s ease',
-                    'min-height': '80px',
+                    'min-height': '60px',
                     'display': 'flex',
                     'flex-direction': 'column',
                     'justify-content': 'space-between'
@@ -564,9 +587,9 @@
                 songName.css({
                     'color': 'rgba(255, 255, 255, 0.9)',
                     'font-weight': 'bold',
-                    'margin-bottom': '8px',
-                    'font-size': '14px',
-                    'line-height': '1.3',
+                    'margin-bottom': '4px',
+                    'font-size': '12px',
+                    'line-height': '1.2',
                     'overflow': 'hidden',
                     'text-overflow': 'ellipsis',
                     'white-space': 'nowrap'
@@ -576,8 +599,8 @@
                 const songStats = $('<div class="song-stats"></div>');
                 songStats.css({
                     'color': 'rgba(255, 255, 255, 0.7)',
-                    'font-size': '12px',
-                    'line-height': '1.2',
+                    'font-size': '10px',
+                    'line-height': '1.1',
                     'margin-top': 'auto'
                 });
                 
@@ -595,16 +618,19 @@
         }
         
         prepareChartJsData(chartData) {
+            console.log('Preparing Chart.js data with:', chartData);
+            
             // Get all unique dates and sort them
             const allDates = new Set();
             chartData.songs.forEach(song => {
+                console.log('Processing song for chart:', song.song, 'with data:', song.data);
                 song.data.forEach(point => {
                     allDates.add(point.date);
                 });
             });
             
             const sortedDates = Array.from(allDates).sort();
-            console.log('Sorted dates:', sortedDates);
+            console.log('Sorted dates for chart:', sortedDates);
             
             // Create datasets for each song with proper gap handling
             const datasets = chartData.songs.map((song, index) => {
@@ -617,6 +643,13 @@
                 const data = sortedDates.map(date => {
                     const point = song.data.find(p => p.date === date);
                     return point ? point.position : null;
+                });
+                
+                console.log(`Dataset ${index} for ${song.song}:`, {
+                    label: song.song,
+                    dataLength: data.length,
+                    nonNullData: data.filter(p => p !== null).length,
+                    sampleData: data.filter(p => p !== null).slice(0, 5)
                 });
                 
                 return {
@@ -812,6 +845,11 @@
                 });
                 
                 console.log('Chart.js chart created successfully');
+                console.log('Chart instance:', chart);
+                console.log('Chart canvas:', chart.canvas);
+                console.log('Chart canvas dimensions:', { width: chart.canvas.width, height: chart.canvas.height });
+                console.log('Chart data:', chart.data);
+                console.log('Chart options:', chart.options);
                 this.chartInstance = chart;
                 
                 // Set initial zoom level - start with reasonable zoom
