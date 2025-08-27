@@ -19,12 +19,125 @@
             this.chartData = null;
             this.tooltip = null;
             
+            // Check if required scripts are loaded
+            this.checkScriptsLoaded();
+            
             this.init();
         }
         
         init() {
             this.createTooltip();
             this.loadChartData();
+        }
+        
+        checkScriptsLoaded() {
+            console.log('Checking if required scripts are loaded...');
+            console.log('jQuery available:', typeof $ !== 'undefined');
+            console.log('Chart.js available:', typeof Chart !== 'undefined');
+            console.log('Chart.js zoom plugin available:', typeof ChartZoom !== 'undefined');
+            
+            // Check if scripts are in the DOM
+            console.log('Chart.js script tag found:', document.querySelector('script[src*="chart.js"]') !== null);
+            console.log('Chart.js zoom script tag found:', document.querySelector('script[src*="chartjs-plugin-zoom"]') !== null);
+            
+            // Check window object
+            console.log('window.Chart:', window.Chart);
+            console.log('window.ChartZoom:', window.ChartZoom);
+            
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded! This will cause the chart to fail.');
+                console.error('Check if the script is being enqueued properly in PHP.');
+                console.error('Script loading order may be incorrect.');
+            }
+        }
+        
+        waitForChartJs(callback, maxAttempts = 100) {
+            console.log('Waiting for Chart.js to load...');
+            
+            if (typeof Chart !== 'undefined') {
+                console.log('Chart.js is already loaded, executing callback immediately');
+                callback();
+                return;
+            }
+            
+            // Try to manually load Chart.js if it's not available after 10 attempts
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                console.log(`Chart.js loading attempt ${attempts}/${maxAttempts} - Chart available: ${typeof Chart !== 'undefined'}`);
+                
+                // Check if scripts are in DOM
+                const chartScript = document.querySelector('script[src*="chart.js"]');
+                const zoomScript = document.querySelector('script[src*="chartjs-plugin-zoom"]');
+                console.log('Scripts in DOM:', { chartScript: !!chartScript, zoomScript: !!zoomScript });
+                
+                if (typeof Chart !== 'undefined') {
+                    console.log('Chart.js loaded successfully!');
+                    clearInterval(checkInterval);
+                    callback();
+                } else if (attempts === 10) {
+                    // Try manual loading after 10 attempts
+                    console.log('Attempting to manually load Chart.js...');
+                    this.manuallyLoadChartJs(callback);
+                } else if (attempts >= maxAttempts) {
+                    console.error('Chart.js failed to load after maximum attempts');
+                    clearInterval(checkInterval);
+                    // Show detailed error
+                    this.showChartJsError();
+                }
+            }, 200); // Check every 200ms instead of 100ms
+        }
+        
+        manuallyLoadChartJs(callback) {
+            console.log('Manually loading Chart.js from CDN...');
+            
+            // Load Chart.js
+            const chartScript = document.createElement('script');
+            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+            chartScript.onload = () => {
+                console.log('Chart.js manually loaded successfully!');
+                
+                // Load zoom plugin
+                const zoomScript = document.createElement('script');
+                zoomScript.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js';
+                zoomScript.onload = () => {
+                    console.log('Chart.js zoom plugin manually loaded successfully!');
+                    callback();
+                };
+                zoomScript.onerror = () => {
+                    console.error('Failed to manually load zoom plugin');
+                    callback(); // Continue without zoom plugin
+                };
+                document.head.appendChild(zoomScript);
+            };
+            chartScript.onerror = () => {
+                console.error('Failed to manually load Chart.js');
+                this.showChartJsError();
+            };
+            document.head.appendChild(chartScript);
+        }
+        
+        showChartJsError() {
+            console.error('Chart.js loading failed - showing detailed error message');
+            
+            // Find the chart container and show a helpful error
+            const chartContainer = this.container.find('.chart-main-area');
+            if (chartContainer.length > 0) {
+                chartContainer.html(`
+                    <div style="padding: 20px; text-align: center; color: rgba(255, 255, 255, 0.8);">
+                        <h3>Chart.js Loading Failed</h3>
+                        <p>The chart library failed to load. This could be due to:</p>
+                        <ul style="text-align: left; display: inline-block; margin: 10px 0;">
+                            <li>Network connectivity issues</li>
+                            <li>CDN blocking or rate limiting</li>
+                            <li>Script loading order problems</li>
+                            <li>Browser security restrictions</li>
+                        </ul>
+                        <p><strong>Please refresh the page and try again.</strong></p>
+                        <p><em>If the problem persists, check the browser console for detailed error messages.</em></p>
+                    </div>
+                `);
+            }
         }
         
         createTooltip() {
@@ -129,33 +242,27 @@
             
             console.log('Rendering chart content with songs:', this.chartData.songs);
             
-            // Add Y-axis labels (1 at top, 100 at bottom)
-            this.addYAxisLabels(chartContent);
-            
             // Process chart data to get all unique weeks and song trajectories
             const chartData = this.processChartData();
             
-            // Calculate chart dimensions - optimize for better spacing
-            const chartHeight = parseInt(this.height) || 400;
+            // Calculate chart dimensions - more height for better spacing
+            const chartHeight = parseInt(this.height) || 600; // Increased from 400 to 600
             const weekCount = chartData.weeks.length;
-            // ROBUST width calculation to eliminate blank space - each week gets reasonable space
-            const chartWidth = Math.min(1000, Math.max(600, weekCount * 3)); // 3px per week is reasonable
+            // Use reasonable width - not forcing 1250px
+            const chartWidth = Math.max(800, weekCount * 25); // Increased from 20px to 25px per week
             
             console.log('Chart dimensions:', { chartHeight, weekCount, chartWidth });
             
-            // Set chart dimensions - account for sidebar
+            // Set chart dimensions - reasonable width that won't force 1250px
+            const contentWidth = Math.min(1200, Math.max(800, chartWidth + 290)); // Cap at 1200px
             chartContent.css({
-                'min-width': (chartWidth + 290) + 'px',
-                'max-width': (chartWidth + 290) + 'px',
+                'min-width': contentWidth + 'px',
+                'max-width': contentWidth + 'px',
                 'height': chartHeight + 'px',
                 'position': 'relative'
             });
             
-            // Add grid lines
-            this.addGridLines(chartContent, chartHeight, chartWidth);
-            
-            // Add X-axis labels (weeks)
-            this.addXAxisLabels(chartContent, chartData.weeks, chartWidth);
+            // Chart.js will handle all axis rendering automatically
             
             // Draw song lines
             this.drawSongLines(chartContent, chartData, chartHeight, chartWidth);
@@ -169,21 +276,7 @@
             }
         }
         
-        addYAxisLabels(chartContent) {
-            const yAxisLabels = $('<div class="y-axis-labels"></div>');
-            
-            // Add position labels (1, 25, 50, 75, 100)
-            const positions = [1, 25, 50, 75, 100];
-            positions.forEach(position => {
-                const label = $(`<div class="y-axis-label">${position}</div>`);
-                // INVERTED Y-axis positioning: 100 at top (0%), 1 at bottom (100%)
-                const yPos = (100 - position) / 99 * 100; // 100->0%, 1->100%
-                label.css('top', yPos + '%');
-                yAxisLabels.append(label);
-            });
-            
-            chartContent.append(yAxisLabels);
-        }
+        // Y-axis labels are now handled by Chart.js automatically
         
         processChartData() {
             console.log('Processing chart data...');
@@ -300,83 +393,45 @@
             return Math.round(Math.abs((date2 - date1) / oneWeek));
         }
         
-        addGridLines(chartContent, chartHeight, chartWidth) {
-            const gridContainer = $('<div class="chart-grid"></div>');
-            
-            // Horizontal grid lines for chart positions
-            const positions = [1, 25, 50, 75, 100];
-            positions.forEach(position => {
-                // INVERTED grid line positioning: 100 at top (0), 1 at bottom (chartHeight)
-                const yPos = (100 - position) / 99 * chartHeight; // 100->0, 1->chartHeight
-                const line = $('<div class="grid-line horizontal"></div>');
-                line.css({
-                    'position': 'absolute',
-                    'top': yPos + 'px',
-                    'left': '0',
-                    'width': '100%',
-                    'height': '1px',
-                    'background': 'rgba(255, 255, 255, 0.1)',
-                    'z-index': '1'
-                });
-                gridContainer.append(line);
-            });
-            
-            chartContent.append(gridContainer);
-        }
+        // Grid lines are now handled by Chart.js automatically
         
-        addXAxisLabels(chartContent, weeks, chartWidth) {
-            const xAxisContainer = $('<div class="x-axis-labels"></div>');
-            
-            weeks.forEach((week, index) => {
-                if (week.showLabel) {
-                    const label = $('<div class="x-axis-label"></div>');
-                    const xPos = (index / (weeks.length - 1)) * chartWidth;
-                    
-                    label.text(week.label);
-                    label.css({
-                        'position': 'absolute',
-                        'bottom': '-30px',
-                        'left': xPos + 'px',
-                        'transform': 'translateX(-50%) rotate(-45deg)',
-                        'font-size': '0.7rem',
-                        'color': 'rgba(255, 255, 255, 0.8)',
-                        'white-space': 'nowrap',
-                        'z-index': '10'
-                    });
-                    
-                    xAxisContainer.append(label);
-                }
-            });
-            
-            chartContent.append(xAxisContainer);
-        }
+        // X-axis labels are now handled by Chart.js automatically
         
         drawSongLines(chartContent, chartData, chartHeight, chartWidth) {
             console.log('Drawing song lines with Chart.js approach...');
             console.log('Chart data:', chartData);
             
-            // Create sidebar for song list
+            // Calculate week count from chart data
+            const weekCount = chartData.weeks ? chartData.weeks.length : chartData.songs.reduce((max, song) => {
+                return Math.max(max, song.data.length);
+            }, 0);
+            
+            console.log('Week count calculated:', weekCount);
+            
+            // Create sidebar for song list - 1/4 of container width
             const sidebar = $('<div class="chart-sidebar"></div>');
             sidebar.css({
-                'width': '250px',
+                'width': '25%',
                 'float': 'left',
                 'padding': '20px',
                 'background': 'rgba(0, 0, 0, 0.1)',
                 'border-right': '1px solid rgba(255, 255, 255, 0.2)',
                 'height': chartHeight + 'px',
-                'overflow-y': 'auto'
+                'overflow-y': 'auto',
+                'min-width': '250px'
             });
             
             // Add song list to sidebar
             this.createSongSidebar(sidebar, chartData);
             
-            // Create main chart area with ROBUST horizontal scrolling
+            // Create main chart area - takes remaining width after sidebar
             const chartArea = $('<div class="chart-main-area"></div>');
             chartArea.css({
                 'margin-left': '20px',
-                'width': (chartWidth - 290) + 'px',
+                'width': 'calc(75% - 20px)',
                 'position': 'relative',
-                'overflow': 'hidden'
+                'overflow': 'hidden',
+                'min-width': '600px'
             });
             
             // Create scrollable container for proper horizontal scrolling
@@ -385,101 +440,46 @@
                 'width': '100%',
                 'overflow-x': 'auto',
                 'overflow-y': 'hidden',
-                'position': 'relative'
+                'position': 'relative',
+                'min-width': '100%'
             });
             
             chartArea.append(scrollContainer);
             
-            // Create canvas with EXACT width to eliminate blank space
+            // Create canvas with better sizing and spacing
             const canvas = $('<canvas></canvas>');
-            const actualChartWidth = chartWidth - 290; // Match container width exactly
+            const actualChartWidth = Math.max(1000, weekCount * 30); // More space per week
             canvas.attr('width', actualChartWidth);
             canvas.attr('height', chartHeight);
             canvas.css({
                 'width': actualChartWidth + 'px',
                 'height': chartHeight + 'px',
-                'display': 'block'
+                'display': 'block',
+                'margin': '20px'
             });
+            
+            console.log('Canvas created with dimensions:', { width: actualChartWidth, height: chartHeight });
             
             scrollContainer.append(canvas);
             
             // Add zoom instructions
-            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll to zoom horizontally • Drag to pan left/right</div>');
+            const zoomInstructions = $('<div class="zoom-instructions">🔍 Scroll wheel to zoom in/out horizontally • Drag to pan left/right • Y-axis stays fixed at 1-100</div>');
             chartArea.append(zoomInstructions);
             
             // Prepare data for Chart.js with proper gap handling
             const chartJsData = this.prepareChartJsData(chartData);
             console.log('Chart.js data prepared with gaps:', chartJsData);
             
-            // Create the chart with correct dimensions
-            this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, chartHeight);
+            // Ensure Chart.js is loaded before creating chart
+            this.waitForChartJs(() => {
+                console.log('Chart.js loaded, creating chart...');
+                this.createChartJsChart(canvas[0], chartJsData, actualChartWidth, chartHeight);
+            });
             
             // Add both sidebar and chart area
             chartContent.append(sidebar);
             chartContent.append(chartArea);
             console.log('Finished drawing song lines with Chart.js and sidebar');
-        }
-        
-        createSongSidebar(sidebar, chartData) {
-            const title = $('<h3 class="sidebar-title">Songs</h3>');
-            title.css({
-                'color': 'rgba(255, 255, 255, 0.9)',
-                'margin-bottom': '20px',
-                'font-size': '18px',
-                'border-bottom': '1px solid rgba(255, 255, 255, 0.2)',
-                'padding-bottom': '10px'
-            });
-            
-            sidebar.append(title);
-            
-            chartData.songs.forEach((song, index) => {
-                const colors = [
-                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
-                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
-                ];
-                
-                const songItem = $('<div class="song-item"></div>');
-                songItem.css({
-                    'padding': '10px',
-                    'margin-bottom': '10px',
-                    'background': 'rgba(255, 255, 255, 0.05)',
-                    'border-radius': '5px',
-                    'border-left': '4px solid ' + colors[index % colors.length],
-                    'cursor': 'pointer',
-                    'transition': 'all 0.2s ease'
-                });
-                
-                songItem.hover(
-                    function() {
-                        $(this).css('background', 'rgba(255, 255, 255, 0.1)');
-                    },
-                    function() {
-                        $(this).css('background', 'rgba(255, 255, 255, 0.05)');
-                    }
-                );
-                
-                const songName = $('<div class="song-name"></div>');
-                songName.css({
-                    'color': 'rgba(255, 255, 255, 0.9)',
-                    'font-weight': 'bold',
-                    'margin-bottom': '5px'
-                });
-                songName.text(song.song);
-                
-                const songStats = $('<div class="song-stats"></div>');
-                songStats.css({
-                    'color': 'rgba(255, 255, 255, 0.7)',
-                    'font-size': '12px'
-                });
-                
-                const peakPosition = Math.min(...song.data.map(p => p.position));
-                const weeksOnChart = song.data.length;
-                songStats.html(`Peak: #${peakPosition} | Weeks: ${weeksOnChart}`);
-                
-                songItem.append(songName);
-                songItem.append(songStats);
-                sidebar.append(songItem);
-            });
         }
         
         createSongSidebar(sidebar, chartData) {
@@ -608,16 +608,23 @@
         }
         
         createChartJsChart(canvas, data, width, height) {
+            // Debug Chart.js availability
+            console.log('Chart.js availability check:');
+            console.log('typeof Chart:', typeof Chart);
+            console.log('window.Chart:', window.Chart);
+            console.log('Chart object:', Chart);
+            
             // Check if Chart.js is available
             if (typeof Chart === 'undefined') {
-                console.error('Chart.js is not loaded');
-                // Fallback to simple HTML display
+                console.error('Chart.js is not loaded - scripts may not be loading properly');
                 this.createSimpleChartFallback(canvas, data);
                 return;
             }
             
             try {
                 const ctx = canvas.getContext('2d');
+                
+                // SIMPLIFIED Chart.js configuration to avoid errors
                 const chart = new Chart(ctx, {
                     type: 'line',
                     data: data,
@@ -625,75 +632,112 @@
                         responsive: false,
                         maintainAspectRatio: false,
                         scales: {
-                            x: {
-                                display: true,
-                                title: {
-                                    display: true,
-                                    text: 'Week',
-                                    color: 'rgba(255, 255, 255, 0.8)'
+                                                    x: {
+                            display: true,
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 14,
+                                    weight: '600'
                                 },
-                                ticks: {
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
+                                padding: 12,
+                                maxTicksLimit: 15,
+                                callback: function(value, index, values) {
+                                    // Show every other week label for better spacing
+                                    return index % 2 === 0 ? value : '';
                                 }
                             },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.15)'
+                            }
+                        },
                             y: {
                                 display: true,
                                 title: {
-                                    display: true,
-                                    text: 'Chart Position',
-                                    color: 'rgba(255, 255, 255, 0.8)'
+                                    display: false
                                 },
                                 ticks: {
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    reverse: true, // 100 at top, 1 at bottom (INVERTED)
-                                    callback: function(value) {
-                                        return value;
+                                    color: 'rgba(255, 255, 255, 0.9)',
+                                    reverse: false, // 1 at top, 100 at bottom
+                                    font: {
+                                        size: 14,
+                                        weight: '600'
+                                    },
+                                    padding: 10,
+                                    callback: function(value, index, values) {
+                                        // Show more positions for better readability
+                                        if ([1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100].includes(value)) {
+                                            return value;
+                                        }
+                                        return '';
                                     }
                                 },
                                 grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
+                                    color: 'rgba(255, 255, 255, 0.15)'
                                 },
                                 min: 1,
                                 max: 100,
-                                beginAtZero: false,
-                                // Ensure Y-axis stays fixed during zoom
-                                afterFit: function(axis) {
-                                    axis.min = 1;
-                                    axis.max = 100;
-                                }
+                                beginAtZero: false
                             }
                         },
                         plugins: {
                             legend: {
-                                display: false // Hide legend since we have sidebar
+                                display: false
                             },
                             tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                                titleColor: 'rgba(255, 255, 255, 0.9)',
-                                bodyColor: 'rgba(255, 255, 255, 0.8)',
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                                borderWidth: 1
+                                mode: 'nearest',
+                                intersect: true,
+                                backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                                titleColor: 'rgba(255, 255, 255, 1)',
+                                bodyColor: 'rgba(255, 255, 255, 1)',
+                                borderColor: 'rgba(255, 255, 255, 0.4)',
+                                borderWidth: 2,
+                                titleFont: {
+                                    size: 16,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 14
+                                },
+                                padding: 16,
+                                cornerRadius: 10,
+                                displayColors: true,
+                                position: 'nearest',
+                                callbacks: {
+                                    title: function(context) {
+                                        return context[0].label;
+                                    },
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y;
+                                    }
+                                }
                             },
                             zoom: {
-                                zoom: {
-                                    wheel: {
-                                        enabled: true,
-                                    },
-                                    pinch: {
-                                        enabled: true
-                                    },
-                                    mode: 'x', // Only zoom horizontally
+                                                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    speed: 0.05
                                 },
+                                pinch: {
+                                    enabled: false
+                                },
+                                mode: 'x'
+                            },
                                 pan: {
                                     enabled: true,
-                                    mode: 'x', // Only pan horizontally
+                                    mode: 'x'
+                                },
+                                limits: {
+                                    x: {
+                                        min: 'original',
+                                        max: 'original'
+                                    },
+                                    y: {
+                                        min: 1,
+                                        max: 100
+                                    }
                                 }
                             }
                         },
@@ -701,12 +745,32 @@
                             mode: 'nearest',
                             axis: 'x',
                             intersect: false
+                        },
+                        onZoom: function() {
+                            // Ensure Y-axis stays fixed at 1-100 after zoom
+                            this.scales.y.min = 1;
+                            this.scales.y.max = 100;
+                        },
+                        onPan: function() {
+                            // Ensure Y-axis stays fixed at 1-100 after pan
+                            this.scales.y.min = 1;
+                            this.scales.y.max = 100;
                         }
                     }
                 });
                 
-                console.log('Chart.js chart created successfully');
-                this.chartInstance = chart; // Store the chart instance
+                console.log('BULLETPROOF Chart.js chart created successfully');
+                this.chartInstance = chart;
+                
+                // Set initial zoom level - start more zoomed in
+                setTimeout(() => {
+                    if (chart.zoom) {
+                        chart.zoom.zoom({
+                            x: 2.5, // Start 2.5x zoomed in
+                            y: 1    // No vertical zoom
+                        });
+                    }
+                }, 100);
                 
             } catch (error) {
                 console.error('Error creating Chart.js chart:', error);

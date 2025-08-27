@@ -93,22 +93,22 @@ class UrbanTop40_Artist_Charts {
         // Only load if shortcode is present on the page
         global $post;
         if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'artist_chart')) {
-            // Enqueue Chart.js from CDN
+            // Enqueue Chart.js from CDN - MUST load in footer
             wp_enqueue_script(
                 'chart-js',
                 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
                 array(),
                 '4.4.0',
-                false
+                true // Load in footer
             );
             
-            // Enqueue Chart.js zoom plugin
+            // Enqueue Chart.js zoom plugin - MUST load in footer
             wp_enqueue_script(
                 'chart-js-zoom',
                 'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
                 array('chart-js'),
                 '2.0.1',
-                false
+                true // Load in footer
             );
             
             wp_enqueue_script(
