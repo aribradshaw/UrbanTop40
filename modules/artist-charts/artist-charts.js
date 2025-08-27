@@ -291,15 +291,21 @@
     
     // Initialize artist charts when DOM is ready
     $(document).ready(function() {
-        // Check if Chart.js is available
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js is required for artist charts to work');
-            return;
-        }
+        // Wait for Chart.js to be available
+        const waitForChartJS = () => {
+            if (typeof Chart !== 'undefined') {
+                // Chart.js is available, initialize charts
+                $('.artist-charts-container').each(function() {
+                    new ArtistCharts($(this));
+                });
+            } else {
+                // Wait a bit more and try again
+                setTimeout(waitForChartJS, 100);
+            }
+        };
         
-        $('.artist-charts-container').each(function() {
-            new ArtistCharts($(this));
-        });
+        // Start waiting for Chart.js
+        waitForChartJS();
     });
     
 })(jQuery);

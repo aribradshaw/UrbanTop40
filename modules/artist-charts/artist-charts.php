@@ -24,10 +24,49 @@ class UrbanTop40_ArtistCharts {
      * Enqueue necessary scripts and styles
      */
     public function enqueue_scripts() {
+        // Option 1: Load Chart.js from CDN (recommended for development)
+        wp_enqueue_script(
+            'chartjs',
+            'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js',
+            array(),
+            '4.4.0',
+            false
+        );
+        
+        // Enqueue Chart.js Date Adapter for proper date handling
+        wp_enqueue_script(
+            'chartjs-adapter-date-fns',
+            'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js',
+            array('chartjs'),
+            '3.0.0',
+            false
+        );
+        
+        // Alternative: Load Chart.js locally if CDN fails
+        // Uncomment the lines below and comment out the CDN version above if needed
+        /*
+        wp_enqueue_script(
+            'chartjs',
+            plugin_dir_url(__FILE__) . 'lib/chart.umd.js',
+            array(),
+            '4.4.0',
+            false
+        );
+        
+        wp_enqueue_script(
+            'chartjs-adapter-date-fns',
+            plugin_dir_url(__FILE__) . 'lib/chartjs-adapter-date-fns.bundle.min.js',
+            array('chartjs'),
+            '3.0.0',
+            false
+        );
+        */
+        
+        // Enqueue our custom script (depends on Chart.js and jQuery)
         wp_enqueue_script(
             'artist-charts-js',
             plugin_dir_url(__FILE__) . 'artist-charts.js',
-            array('jquery'),
+            array('jquery', 'chartjs', 'chartjs-adapter-date-fns'),
             '1.0.0',
             true
         );
