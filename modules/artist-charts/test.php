@@ -65,6 +65,7 @@ if (!class_exists('UrbanTop40_ArtistCharts')) {
                 <li><strong>Horizontal Panning:</strong> Shift + Scroll wheel to move left/right through weeks</li>
                 <li><strong>Scrollbar:</strong> Click and drag the scrollbar below the chart to navigate</li>
                 <li><strong>Week Indicator:</strong> Shows current visible week range</li>
+                <li><strong>Gap Labels:</strong> Shows "X week gap" for periods with no chart activity</li>
                 <li><strong>Default View:</strong> Shows first 10 weeks</li>
             </ul>
             <div class="shortcode-example">[artist_charts artist="the beatles"]</div>

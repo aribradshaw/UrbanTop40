@@ -120,9 +120,57 @@
                                 },
                                 label: (context) => {
                                     const songName = context.dataset.label;
-                                    const position = 101 - context.parsed.y;
-                                    return `${songName}: #${position}`;
+                                    const point = context.raw;
+                                    
+                                    if (point.isGap) {
+                                        return `${songName}: ${point.gapWeeks} week gap`;
+                                    } else {
+                                        const position = 101 - context.parsed.y;
+                                        return `${songName}: #${position}`;
+                                    }
                                 }
+                            }
+                        },
+                        customGapRenderer: {
+                            id: 'customGapRenderer',
+                            afterDraw: (chart) => {
+                                const ctx = chart.ctx;
+                                const meta = chart.getDatasetMeta(0);
+                                
+                                if (!meta.data) return;
+                                
+                                meta.data.forEach((point, index) => {
+                                    const dataPoint = chart.data.datasets[0].data[index];
+                                    if (dataPoint && dataPoint.isGap) {
+                                        // Draw gap label
+                                        ctx.save();
+                                        ctx.font = '12px Arial';
+                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        
+                                        const x = point.x;
+                                        const y = point.y;
+                                        
+                                        // Draw background for text
+                                        const text = `${dataPoint.gapWeeks}w`;
+                                        const textMetrics = ctx.measureText(text);
+                                        const padding = 4;
+                                        
+                                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                                        ctx.fillRect(
+                                            x - textMetrics.width/2 - padding,
+                                            y - 8 - padding,
+                                            textMetrics.width + padding * 2,
+                                            16 + padding * 2
+                                        );
+                                        
+                                        // Draw text
+                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                                        ctx.fillText(text, x, y - 8);
+                                        ctx.restore();
+                                    }
+                                });
                             }
                         }
                     },
@@ -158,8 +206,14 @@
                     },
                     elements: {
                         point: {
-                            radius: 3,
-                            hoverRadius: 5
+                            radius: (context) => {
+                                const point = context.raw;
+                                return point && point.isGap ? 0 : 3; // Hide gap points
+                            },
+                            hoverRadius: (context) => {
+                                const point = context.raw;
+                                return point && point.isGap ? 0 : 5; // Hide gap points on hover
+                            }
                         },
                         line: {
                             tension: 0.1
@@ -196,13 +250,7 @@
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
-                const data = visibleDates.map(date => {
-                    const entry = song.chartHistory.find(e => e.date === date);
-                    return entry ? {
-                        x: new Date(date),
-                        y: 101 - entry.position
-                    } : null;
-                }).filter(point => point !== null);
+                const data = this.createSongDataWithGaps(song, visibleDates);
                 
                 return {
                     label: song.song,
@@ -216,6 +264,42 @@
             });
             
             return { datasets };
+        }
+        
+        createSongDataWithGaps(song, visibleDates) {
+            const data = [];
+            let lastEntry = null;
+            
+            for (let i = 0; i < visibleDates.length; i++) {
+                const currentDate = visibleDates[i];
+                const entry = song.chartHistory.find(e => e.date === currentDate);
+                
+                if (entry) {
+                    // Add the actual chart entry
+                    data.push({
+                        x: new Date(currentDate),
+                        y: 101 - entry.position
+                    });
+                    lastEntry = entry;
+                } else if (lastEntry) {
+                    // Check if this is a significant gap (more than 2 weeks)
+                    const lastDate = new Date(lastEntry.date);
+                    const currentDateObj = new Date(currentDate);
+                    const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    if (weekDiff > 2) {
+                        // Add a gap label point
+                        data.push({
+                            x: new Date(currentDate),
+                            y: 101 - lastEntry.position, // Keep same Y position for visual continuity
+                            isGap: true,
+                            gapWeeks: weekDiff
+                        });
+                    }
+                }
+            }
+            
+            return data;
         }
         
         updateStats() {
@@ -250,13 +334,7 @@
             this.chart.data.datasets.forEach((dataset, datasetIndex) => {
                 const song = this.chartData.songs[datasetIndex];
                 if (song) {
-                    dataset.data = visibleDates.map(date => {
-                        const entry = song.chartHistory.find(e => e.date === date);
-                        return entry ? {
-                            x: new Date(date),
-                            y: 101 - entry.position
-                        } : null;
-                    }).filter(point => point !== null);
+                    dataset.data = this.createSongDataWithGaps(song, visibleDates);
                 }
             });
             
