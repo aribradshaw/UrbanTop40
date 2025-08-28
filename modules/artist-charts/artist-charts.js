@@ -14,6 +14,7 @@
             this.chartData = null;
             this.chart = null;
             this.visibleWeeks = 10; // Default to first 10 weeks
+            this.startWeek = 0; // Which week to start from (for panning)
             this.allDates = [];
             
             this.init();
@@ -29,6 +30,14 @@
             this.container.on('wheel', '.chart-area', (e) => {
                 e.preventDefault();
                 this.handleZoom(e);
+            });
+            
+            // Horizontal scrolling/panning
+            this.container.on('wheel', '.chart-area', (e) => {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    this.handleHorizontalScroll(e);
+                }
             });
             
             // Error retry
@@ -158,6 +167,9 @@
                     }
                 }
             });
+            
+            // Add scrollbar and week indicator
+            this.addScrollbarAndIndicator();
         }
         
         prepareChartData() {
@@ -173,8 +185,9 @@
             
             this.allDates = Array.from(this.allDates).sort();
             
-            // Get the visible date range based on visibleWeeks
-            const visibleDates = this.allDates.slice(0, this.visibleWeeks);
+            // Get the visible date range based on startWeek and visibleWeeks
+            const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
+            const visibleDates = this.allDates.slice(this.startWeek, endWeek);
             
             // Create datasets for each song
             const datasets = this.chartData.songs.map((song, index) => {
@@ -229,8 +242,9 @@
         updateChartData() {
             if (!this.chart || !this.chartData) return;
             
-            // Get the visible date range based on visibleWeeks
-            const visibleDates = this.allDates.slice(0, this.visibleWeeks);
+            // Get the visible date range based on startWeek and visibleWeeks
+            const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
+            const visibleDates = this.allDates.slice(this.startWeek, endWeek);
             
             // Update each dataset with new data
             this.chart.data.datasets.forEach((dataset, datasetIndex) => {
@@ -248,6 +262,118 @@
             
             // Update the chart
             this.chart.update('none');
+        }
+        
+        handleHorizontalScroll(e) {
+            const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
+            const scrollAmount = Math.max(1, Math.floor(this.visibleWeeks / 4)); // Scroll by 1/4 of visible weeks
+            
+            // Calculate new start week
+            let newStartWeek = this.startWeek + (delta * scrollAmount);
+            
+            // Clamp to valid range
+            newStartWeek = Math.max(0, Math.min(this.allDates.length - this.visibleWeeks, newStartWeek));
+            
+            if (newStartWeek !== this.startWeek) {
+                this.startWeek = newStartWeek;
+                this.updateChartData();
+                this.updateScrollbarPosition();
+            }
+        }
+        
+        addScrollbarAndIndicator() {
+            const chartContainer = this.container.find('#chart-container');
+            
+            // Add week indicator above chart
+            const weekIndicator = $(`
+                <div class="week-indicator">
+                    <span class="week-range">Weeks ${this.startWeek + 1}-${Math.min(this.startWeek + this.visibleWeeks, this.allDates.length)} of ${this.allDates.length}</span>
+                </div>
+            `);
+            chartContainer.before(weekIndicator);
+            
+            // Add scrollbar below chart
+            const scrollbar = $(`
+                <div class="chart-scrollbar">
+                    <div class="scrollbar-track">
+                        <div class="scrollbar-thumb" style="left: ${this.getScrollbarPosition()}%"></div>
+                    </div>
+                </div>
+            `);
+            chartContainer.after(scrollbar);
+            
+            // Make scrollbar draggable
+            this.makeScrollbarDraggable();
+        }
+        
+        updateScrollbarPosition() {
+            const weekIndicator = this.container.find('.week-indicator .week-range');
+            const scrollbarThumb = this.container.find('.scrollbar-thumb');
+            
+            if (weekIndicator.length) {
+                weekIndicator.text(`Weeks ${this.startWeek + 1}-${Math.min(this.startWeek + this.visibleWeeks, this.allDates.length)} of ${this.allDates.length}`);
+            }
+            
+            if (scrollbarThumb.length) {
+                scrollbarThumb.css('left', this.getScrollbarPosition() + '%');
+            }
+        }
+        
+        getScrollbarPosition() {
+            if (this.allDates.length <= this.visibleWeeks) return 0;
+            return (this.startWeek / (this.allDates.length - this.visibleWeeks)) * 100;
+        }
+        
+        makeScrollbarDraggable() {
+            const scrollbar = this.container.find('.chart-scrollbar');
+            const track = scrollbar.find('.scrollbar-track');
+            let isDragging = false;
+            
+            track.on('mousedown', (e) => {
+                isDragging = true;
+                this.handleScrollbarClick(e);
+            });
+            
+            $(document).on('mousemove', (e) => {
+                if (isDragging) {
+                    this.handleScrollbarDrag(e);
+                }
+            });
+            
+            $(document).on('mouseup', () => {
+                isDragging = false;
+            });
+        }
+        
+        handleScrollbarClick(e) {
+            const track = this.container.find('.scrollbar-track');
+            const trackRect = track[0].getBoundingClientRect();
+            const clickX = e.clientX - trackRect.left;
+            const trackWidth = trackRect.width;
+            
+            const percentage = (clickX / trackWidth) * 100;
+            this.setScrollbarPosition(percentage);
+        }
+        
+        handleScrollbarDrag(e) {
+            const track = this.container.find('.scrollbar-track');
+            const trackRect = track[0].getBoundingClientRect();
+            const dragX = e.clientX - trackRect.left;
+            const trackWidth = trackRect.width;
+            
+            const percentage = Math.max(0, Math.min(100, (dragX / trackWidth) * 100));
+            this.setScrollbarPosition(percentage);
+        }
+        
+        setScrollbarPosition(percentage) {
+            if (this.allDates.length <= this.visibleWeeks) return;
+            
+            const maxStartWeek = this.allDates.length - this.visibleWeeks;
+            this.startWeek = Math.round((percentage / 100) * maxStartWeek);
+            this.startWeek = Math.max(0, Math.min(maxStartWeek, this.startWeek));
+            
+            this.updateChartData();
+            this.updateScrollbarPosition();
         }
         
 

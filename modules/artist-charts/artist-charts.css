@@ -152,6 +152,57 @@
     height: 100% !important;
 }
 
+/* Week Indicator */
+.week-indicator {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.week-range {
+    font-family: monospace;
+}
+
+/* Chart Scrollbar */
+.chart-scrollbar {
+    margin-top: 15px;
+    padding: 0 10px;
+}
+
+.scrollbar-track {
+    position: relative;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.scrollbar-thumb {
+    position: absolute;
+    top: 2px;
+    width: 60px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: grab;
+    transition: background 0.2s ease;
+}
+
+.scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.scrollbar-thumb:active {
+    cursor: grabbing;
+    background: rgba(255, 255, 255, 0.6);
+}
+
 /* Song Legend */
 .song-legend {
     background: rgba(255, 255, 255, 0.05);
