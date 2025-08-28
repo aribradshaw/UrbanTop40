@@ -251,7 +251,7 @@
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
-                const data = this.createSongDataWithGaps(song, visibleDates);
+                const data = this.createSongDataWithBreaks(song, visibleDates);
                 
                 return {
                     label: song.song,
@@ -310,6 +310,50 @@
             return data;
         }
         
+        createSongDataWithBreaks(song, visibleDates) {
+            const data = [];
+            let lastEntry = null;
+            
+            for (let i = 0; i < visibleDates.length; i++) {
+                const currentDate = visibleDates[i];
+                const entry = song.chartHistory.find(e => e.date === currentDate);
+                
+                if (entry) {
+                    // Add the actual chart entry
+                    data.push({
+                        x: new Date(currentDate),
+                        y: entry.position
+                    });
+                    lastEntry = entry;
+                } else if (lastEntry) {
+                    // Check if this is a significant gap (more than 2 weeks)
+                    const lastDate = new Date(lastEntry.date);
+                    const currentDateObj = new Date(currentDate);
+                    const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    if (weekDiff > 2) {
+                        // Add a null point to break the line connection
+                        data.push(null);
+                        
+                        // Add a gap label point
+                        data.push({
+                            x: new Date(currentDate),
+                            y: lastEntry.position,
+                            isGap: true,
+                            gapWeeks: weekDiff
+                        });
+                    }
+                }
+            }
+            
+            // Remove any trailing gap points to prevent horizontal lines extending beyond data
+            while (data.length > 0 && data[data.length - 1] && data[data.length - 1].isGap) {
+                data.pop();
+            }
+            
+            return data;
+        }
+        
         updateStats() {
             if (!this.chartData) return;
             
@@ -321,7 +365,7 @@
         }
         
         handleZoom(e) {
-            const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+            const delta = e.originalEvent.deltaY > 0 ? 1.1 : 0.9; // Inverted: scroll up = zoom out, scroll down = zoom in
             const newVisibleWeeks = Math.round(this.visibleWeeks * delta);
             
             // Clamp between 5 and total available weeks
@@ -342,7 +386,7 @@
             this.chart.data.datasets.forEach((dataset, datasetIndex) => {
                 const song = this.chartData.songs[datasetIndex];
                 if (song) {
-                    dataset.data = this.createSongDataWithGaps(song, visibleDates);
+                    dataset.data = this.createSongDataWithBreaks(song, visibleDates);
                 }
             });
             

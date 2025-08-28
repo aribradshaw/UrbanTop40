@@ -61,11 +61,12 @@ if (!class_exists('UrbanTop40_ArtistCharts')) {
             <h2>Chart Visualization</h2>
             <p>This shows the interactive chart with zoom and panning functionality:</p>
             <ul>
-                <li><strong>Vertical Zoom:</strong> Scroll wheel up = zoom in (fewer weeks), Scroll wheel down = zoom out (more weeks)</li>
+                <li><strong>Vertical Zoom:</strong> Scroll wheel up = zoom out (more weeks), Scroll wheel down = zoom in (fewer weeks)</li>
                 <li><strong>Horizontal Panning:</strong> Shift + Scroll wheel to move left/right through weeks</li>
                 <li><strong>Scrollbar:</strong> Click and drag the scrollbar below the chart to navigate</li>
                 <li><strong>Week Indicator:</strong> Shows current visible week range</li>
                 <li><strong>Gap Labels:</strong> Shows "X week gap" for periods with no chart activity</li>
+                <li><strong>Line Breaks:</strong> Songs that fall off the chart won't have connecting lines when they return</li>
                 <li><strong>Default View:</strong> Shows first 10 weeks</li>
             </ul>
             <div class="shortcode-example">[artist_charts artist="the beatles"]</div>
