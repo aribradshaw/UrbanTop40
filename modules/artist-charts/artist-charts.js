@@ -158,9 +158,6 @@
                     }
                 }
             });
-            
-            // Enable horizontal scrolling
-            this.enableHorizontalScroll();
         }
         
         prepareChartData() {
@@ -253,31 +250,7 @@
             this.chart.update('none');
         }
         
-        // Add horizontal scrolling functionality
-        enableHorizontalScroll() {
-            if (!this.chart || !this.chartData) return;
-            
-            // Add horizontal scrollbar to chart container
-            const chartContainer = this.container.find('#chart-container');
-            chartContainer.css({
-                'overflow-x': 'auto',
-                'overflow-y': 'hidden'
-            });
-            
-            // Create a wider canvas to accommodate all data
-            const canvas = chartContainer.find('canvas');
-            const totalWeeks = this.allDates.length;
-            const weekWidth = 50; // Approximate width per week
-            const totalWidth = Math.max(800, totalWeeks * weekWidth); // Minimum 800px width
-            
-            canvas.css('min-width', totalWidth + 'px');
-            
-            // Update chart options to handle horizontal scrolling
-            this.chart.options.scales.x.min = new Date(this.allDates[0]);
-            this.chart.options.scales.x.max = new Date(this.allDates[totalWeeks - 1]);
-            
-            this.chart.update('none');
-        }
+
         
         showLoading() {
             this.container.find('.artist-charts-loading').show();

@@ -145,33 +145,11 @@
     position: relative;
     height: 400px;
     width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
 }
 
 #artist-chart-canvas {
     width: 100% !important;
     height: 100% !important;
-    min-width: 800px;
-}
-
-/* Horizontal scrollbar styling */
-.chart-container::-webkit-scrollbar {
-    height: 8px;
-}
-
-.chart-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-.chart-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-.chart-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
 }
 
 /* Song Legend */

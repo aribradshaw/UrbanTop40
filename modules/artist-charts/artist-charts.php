@@ -126,7 +126,7 @@ class UrbanTop40_ArtistCharts {
             
             <div class="artist-charts-content" style="display: none;">
                 <div class="chart-area" id="chart-area">
-                    <div class="zoom-hint">Scroll wheel to zoom in/out • Scroll horizontally to see more weeks</div>
+                    <div class="zoom-hint">Scroll wheel to zoom in/out (shows more/fewer weeks)</div>
                     <div class="chart-container" id="chart-container"></div>
                 </div>
             </div>
