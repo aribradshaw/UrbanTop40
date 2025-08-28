@@ -57,12 +57,17 @@ if (!class_exists('UrbanTop40_ArtistCharts')) {
 <body>
     <h1>Artist Charts Module Test</h1>
     
-    <div class="test-section">
-        <h2>Chart Visualization</h2>
-        <p>This shows the interactive chart with zoom functionality (scroll to see more/fewer weeks):</p>
-        <div class="shortcode-example">[artist_charts artist="the beatles"]</div>
-        <?php echo do_shortcode('[artist_charts artist="the beatles"]'); ?>
-    </div>
+            <div class="test-section">
+            <h2>Chart Visualization</h2>
+            <p>This shows the interactive chart with zoom functionality and horizontal scrolling:</p>
+            <ul>
+                <li><strong>Vertical Zoom:</strong> Scroll wheel up = zoom in (fewer weeks), Scroll wheel down = zoom out (more weeks)</li>
+                <li><strong>Horizontal Scroll:</strong> Use scrollbar or drag to navigate through weeks</li>
+                <li><strong>Default View:</strong> Shows first 10 weeks</li>
+            </ul>
+            <div class="shortcode-example">[artist_charts artist="the beatles"]</div>
+            <?php echo do_shortcode('[artist_charts artist="the beatles"]'); ?>
+        </div>
     
     <div class="test-section">
         <h2>Song List</h2>
@@ -82,7 +87,8 @@ if (!class_exists('UrbanTop40_ArtistCharts')) {
         <p><strong>Features:</strong></p>
         <ul>
             <li>Interactive line chart showing Billboard chart positions over time</li>
-            <li>Scroll wheel to zoom in/out (shows more/fewer weeks)</li>
+            <li><strong>Vertical Zoom:</strong> Scroll wheel up = zoom in (fewer weeks), Scroll wheel down = zoom out (more weeks)</li>
+            <li><strong>Horizontal Scroll:</strong> Navigate through weeks using scrollbar or drag</li>
             <li>Defaults to showing first 10 weeks</li>
             <li>Hover tooltips showing song details</li>
         </ul>
