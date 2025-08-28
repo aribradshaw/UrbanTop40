@@ -27,7 +27,7 @@
     margin: 0;
     font-size: 24px;
     font-weight: 600;
-    color: #fff;
+    color: #ffffff;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -308,4 +308,33 @@
 .error-retry:focus {
     outline: 2px solid rgba(255, 255, 255, 0.5);
     outline-offset: 2px;
+}
+
+/* Artist Songs Container */
+.artist-songs-container {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.artist-songs-loading {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.artist-songs-error {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.artist-songs-content {
+    margin-top: 20px;
 }

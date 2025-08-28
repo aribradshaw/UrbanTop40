@@ -13,7 +13,8 @@
             this.artist = container.data('artist');
             this.chartData = null;
             this.chart = null;
-            this.zoomLevel = 1;
+            this.visibleWeeks = 10; // Default to first 10 weeks
+            this.allDates = [];
             
             this.init();
         }
@@ -157,23 +158,23 @@
                     }
                 }
             });
-            
-            // Render song legend
-            this.renderSongLegend();
         }
         
         prepareChartData() {
             if (!this.chartData || !this.chartData.songs) return { datasets: [] };
             
-            // Get all unique dates
-            const allDates = new Set();
+            // Get all unique dates and sort them
+            this.allDates = new Set();
             this.chartData.songs.forEach(song => {
                 song.chartHistory.forEach(entry => {
-                    allDates.add(entry.date);
+                    this.allDates.add(entry.date);
                 });
             });
             
-            const sortedDates = Array.from(allDates).sort();
+            this.allDates = Array.from(this.allDates).sort();
+            
+            // Get the visible date range based on visibleWeeks
+            const visibleDates = this.allDates.slice(0, this.visibleWeeks);
             
             // Create datasets for each song
             const datasets = this.chartData.songs.map((song, index) => {
@@ -182,7 +183,7 @@
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
-                const data = sortedDates.map(date => {
+                const data = visibleDates.map(date => {
                     const entry = song.chartHistory.find(e => e.date === date);
                     return entry ? {
                         x: new Date(date),
@@ -202,6 +203,129 @@
             });
             
             return { datasets };
+        }
+        
+        updateStats() {
+            if (!this.chartData) return;
+            
+            this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
+            
+            // Calculate total weeks
+            const totalWeeks = this.allDates.length;
+            this.container.find('#week-count').text(`${totalWeeks} Weeks`);
+        }
+        
+        handleZoom(e) {
+            const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+            const newVisibleWeeks = Math.round(this.visibleWeeks * delta);
+            
+            // Clamp between 5 and total available weeks
+            this.visibleWeeks = Math.max(5, Math.min(this.allDates.length, newVisibleWeeks));
+            
+            // Update the chart with new data
+            this.updateChartData();
+        }
+        
+        updateChartData() {
+            if (!this.chart || !this.chartData) return;
+            
+            // Get the visible date range based on visibleWeeks
+            const visibleDates = this.allDates.slice(0, this.visibleWeeks);
+            
+            // Update each dataset with new data
+            this.chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const song = this.chartData.songs[datasetIndex];
+                if (song) {
+                    dataset.data = visibleDates.map(date => {
+                        const entry = song.chartHistory.find(e => e.date === date);
+                        return entry ? {
+                            x: new Date(date),
+                            y: 101 - entry.position
+                        } : null;
+                    }).filter(point => point !== null);
+                }
+            });
+            
+            // Update the chart
+            this.chart.update('none');
+        }
+        
+        showLoading() {
+            this.container.find('.artist-charts-loading').show();
+        }
+        
+        hideLoading() {
+            this.container.find('.artist-charts-loading').hide();
+        }
+        
+        showContent() {
+            this.container.find('.artist-charts-content').show();
+        }
+        
+        hideContent() {
+            this.container.find('.artist-charts-content').hide();
+        }
+        
+        showError(message) {
+            this.container.find('.error-message').text(message);
+            this.container.find('.artist-charts-error').show();
+        }
+        
+        hideError() {
+            this.container.find('.artist-charts-error').hide();
+        }
+    }
+    
+    class ArtistSongs {
+        constructor(container) {
+            this.container = container;
+            this.artist = container.data('artist');
+            this.chartData = null;
+            
+            this.init();
+        }
+        
+        init() {
+            this.loadArtistData();
+            this.bindEvents();
+        }
+        
+        bindEvents() {
+            // Error retry
+            this.container.on('click', '.error-retry', () => {
+                this.loadArtistData();
+            });
+        }
+        
+        async loadArtistData() {
+            this.showLoading();
+            this.hideError();
+            this.hideContent();
+            
+            try {
+                const response = await $.ajax({
+                    url: artistChartsAjax.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_artist_charts',
+                        artist: this.artist,
+                        nonce: artistChartsAjax.nonce
+                    }
+                });
+                
+                if (response.success) {
+                    this.chartData = response.data;
+                    this.renderSongLegend();
+                    this.showContent();
+                } else {
+                    throw new Error(response.data);
+                }
+            } catch (error) {
+                console.error('Error loading artist data:', error);
+                this.showError(error.message || 'Failed to load artist data');
+            } finally {
+                this.hideLoading();
+            }
         }
         
         renderSongLegend() {
@@ -235,57 +359,29 @@
             });
         }
         
-        updateStats() {
-            if (!this.chartData) return;
-            
-            this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
-            
-            // Calculate total weeks
-            const allDates = new Set();
-            this.chartData.songs.forEach(song => {
-                song.chartHistory.forEach(entry => {
-                    allDates.add(entry.date);
-                });
-            });
-            const totalWeeks = allDates.size;
-            this.container.find('#week-count').text(`${totalWeeks} Weeks`);
-        }
-        
-        handleZoom(e) {
-            const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
-            this.zoomLevel = Math.max(0.5, Math.min(3, this.zoomLevel * delta));
-            
-            this.container.find('#zoom-level').text(`Zoom: ${Math.round(this.zoomLevel * 100)}%`);
-            
-            // Apply zoom to chart container
-            const chartArea = this.container.find('.chart-area');
-            chartArea.css('transform', `scale(${this.zoomLevel})`);
-            chartArea.css('transform-origin', 'top left');
-        }
-        
         showLoading() {
-            this.container.find('.artist-charts-loading').show();
+            this.container.find('.artist-songs-loading').show();
         }
         
         hideLoading() {
-            this.container.find('.artist-charts-loading').hide();
+            this.container.find('.artist-songs-loading').hide();
         }
         
         showContent() {
-            this.container.find('.artist-charts-content').show();
+            this.container.find('.artist-songs-content').show();
         }
         
         hideContent() {
-            this.container.find('.artist-charts-content').hide();
+            this.container.find('.artist-songs-content').hide();
         }
         
         showError(message) {
             this.container.find('.error-message').text(message);
-            this.container.find('.artist-charts-error').show();
+            this.container.find('.artist-songs-error').show();
         }
         
         hideError() {
-            this.container.find('.artist-charts-error').hide();
+            this.container.find('.artist-songs-error').hide();
         }
     }
     
@@ -297,6 +393,11 @@
                 // Chart.js is available, initialize charts
                 $('.artist-charts-container').each(function() {
                     new ArtistCharts($(this));
+                });
+                
+                // Initialize artist songs
+                $('.artist-songs-container').each(function() {
+                    new ArtistSongs($(this));
                 });
             } else {
                 // Wait a bit more and try again

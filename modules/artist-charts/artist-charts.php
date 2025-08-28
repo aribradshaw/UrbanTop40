@@ -16,6 +16,7 @@ class UrbanTop40_ArtistCharts {
     public function __init__() {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_shortcode('artist_charts', array($this, 'render_artist_charts'));
+        add_shortcode('artist_songs', array($this, 'render_artist_songs'));
         add_action('wp_ajax_get_artist_charts', array($this, 'ajax_get_artist_charts'));
         add_action('wp_ajax_nopriv_get_artist_charts', array($this, 'ajax_get_artist_charts'));
     }
@@ -110,7 +111,6 @@ class UrbanTop40_ArtistCharts {
                 <div class="artist-charts-controls">
                     <div class="chart-control-button" id="song-count">Loading...</div>
                     <div class="chart-control-button" id="week-count">Loading...</div>
-                    <div class="chart-control-button" id="zoom-level">Zoom: 100%</div>
                 </div>
             </div>
             
@@ -126,10 +126,44 @@ class UrbanTop40_ArtistCharts {
             
             <div class="artist-charts-content" style="display: none;">
                 <div class="chart-area" id="chart-area">
-                    <div class="zoom-hint">Scroll wheel to zoom in/out</div>
+                    <div class="zoom-hint">Scroll wheel to zoom in/out (shows more/fewer weeks)</div>
                     <div class="chart-container" id="chart-container"></div>
                 </div>
-                
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Shortcode to render artist songs list
+     */
+    public function render_artist_songs($atts) {
+        $atts = shortcode_atts(array(
+            'artist' => 'the beatles',
+            'width' => '100%'
+        ), $atts);
+        
+        $artist = sanitize_text_field($atts['artist']);
+        $width = sanitize_text_field($atts['width']);
+        
+        ob_start();
+        ?>
+        <div class="artist-songs-container" 
+             data-artist="<?php echo esc_attr($artist); ?>"
+             style="width: <?php echo esc_attr($width); ?>;">
+            
+            <div class="artist-songs-loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading songs...</div>
+            </div>
+            
+            <div class="artist-songs-error" style="display: none;">
+                <div class="error-message"></div>
+                <button class="error-retry">Retry</button>
+            </div>
+            
+            <div class="artist-songs-content" style="display: none;">
                 <div class="song-legend">
                     <div class="song-legend-title">Songs</div>
                     <div class="song-legend-scroll" id="song-legend"></div>
