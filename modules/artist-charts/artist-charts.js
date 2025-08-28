@@ -26,8 +26,11 @@
         }
         
         bindEvents() {
+            console.log('Binding events for artist charts');
+            
             // Zoom controls
             this.container.on('wheel', '.chart-area', (e) => {
+                console.log('Wheel event detected');
                 e.preventDefault();
                 this.handleZoom(e);
             });
@@ -35,6 +38,7 @@
             // Horizontal scrolling/panning
             this.container.on('wheel', '.chart-area', (e) => {
                 if (e.shiftKey) {
+                    console.log('Shift+wheel detected');
                     e.preventDefault();
                     this.handleHorizontalScroll(e);
                 }
@@ -122,7 +126,7 @@
                                     const songName = context.dataset.label;
                                     const point = context.raw;
                                     
-                                    if (point.isGap) {
+                                    if (point && point.isGap) {
                                         return `${songName}: ${point.gapWeeks} week gap`;
                                     } else {
                                         const position = context.parsed.y;
@@ -135,41 +139,43 @@
                             id: 'customGapRenderer',
                             afterDraw: (chart) => {
                                 const ctx = chart.ctx;
-                                const meta = chart.getDatasetMeta(0);
                                 
-                                if (!meta.data) return;
-                                
-                                meta.data.forEach((point, index) => {
-                                    const dataPoint = chart.data.datasets[0].data[index];
-                                    if (dataPoint && dataPoint.isGap) {
-                                        // Draw gap label
-                                        ctx.save();
-                                        ctx.font = '12px Arial';
-                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                                        ctx.textAlign = 'center';
-                                        ctx.textBaseline = 'middle';
-                                        
-                                        const x = point.x;
-                                        const y = point.y;
-                                        
-                                        // Draw background for text
-                                        const text = `${dataPoint.gapWeeks}w`;
-                                        const textMetrics = ctx.measureText(text);
-                                        const padding = 4;
-                                        
-                                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                                        ctx.fillRect(
-                                            x - textMetrics.width/2 - padding,
-                                            y - 8 - padding,
-                                            textMetrics.width + padding * 2,
-                                            16 + padding * 2
-                                        );
-                                        
-                                        // Draw text
-                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                                        ctx.fillText(text, x, y - 8);
-                                        ctx.restore();
-                                    }
+                                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                                    const meta = chart.getDatasetMeta(datasetIndex);
+                                    if (!meta.data) return;
+                                    
+                                    meta.data.forEach((point, index) => {
+                                        const dataPoint = dataset.data[index];
+                                        if (dataPoint && dataPoint.isGap) {
+                                            // Draw gap label
+                                            ctx.save();
+                                            ctx.font = '12px Arial';
+                                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                                            ctx.textAlign = 'center';
+                                            ctx.textBaseline = 'middle';
+                                            
+                                            const x = point.x;
+                                            const y = point.y;
+                                            
+                                            // Draw background for text
+                                            const text = `${dataPoint.gapWeeks}w`;
+                                            const textMetrics = ctx.measureText(text);
+                                            const padding = 4;
+                                            
+                                            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                                            ctx.fillRect(
+                                                x - textMetrics.width/2 - padding,
+                                                y - 8 - padding,
+                                                textMetrics.width + padding * 2,
+                                                16 + padding * 2
+                                            );
+                                            
+                                            // Draw text
+                                            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                                            ctx.fillText(text, x, y - 8);
+                                            ctx.restore();
+                                        }
+                                    });
                                 });
                             }
                         }
@@ -267,49 +273,6 @@
             return { datasets };
         }
         
-        createSongDataWithGaps(song, visibleDates) {
-            const data = [];
-            let lastEntry = null;
-            let lastValidIndex = -1;
-            
-            for (let i = 0; i < visibleDates.length; i++) {
-                const currentDate = visibleDates[i];
-                const entry = song.chartHistory.find(e => e.date === currentDate);
-                
-                if (entry) {
-                    // Add the actual chart entry
-                    data.push({
-                        x: new Date(currentDate),
-                        y: entry.position // Use actual position (1-100), Chart.js will handle the display
-                    });
-                    lastEntry = entry;
-                    lastValidIndex = data.length - 1;
-                } else if (lastEntry) {
-                    // Check if this is a significant gap (more than 2 weeks)
-                    const lastDate = new Date(lastEntry.date);
-                    const currentDateObj = new Date(currentDate);
-                    const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
-                    
-                    if (weekDiff > 2) {
-                        // Add a gap label point
-                        data.push({
-                            x: new Date(currentDate),
-                            y: lastEntry.position, // Keep same Y position for visual continuity
-                            isGap: true,
-                            gapWeeks: weekDiff
-                        });
-                    }
-                }
-            }
-            
-            // Remove any trailing gap points to prevent horizontal lines extending beyond data
-            while (data.length > 0 && data[data.length - 1].isGap) {
-                data.pop();
-            }
-            
-            return data;
-        }
-        
         createSongDataWithBreaks(song, visibleDates) {
             const data = [];
             let lastEntry = null;
@@ -365,11 +328,14 @@
         }
         
         handleZoom(e) {
+            console.log('Zoom event:', e.originalEvent.deltaY);
             const delta = e.originalEvent.deltaY > 0 ? 1.1 : 0.9; // Inverted: scroll up = zoom out, scroll down = zoom in
             const newVisibleWeeks = Math.round(this.visibleWeeks * delta);
             
             // Clamp between 5 and total available weeks
             this.visibleWeeks = Math.max(5, Math.min(this.allDates.length, newVisibleWeeks));
+            
+            console.log(`Zoom: ${this.visibleWeeks} -> ${newVisibleWeeks} weeks`);
             
             // Update the chart with new data
             this.updateChartData();
@@ -395,6 +361,7 @@
         }
         
         handleHorizontalScroll(e) {
+            console.log('Horizontal scroll event:', e.originalEvent.deltaY);
             const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
             const scrollAmount = Math.max(1, Math.floor(this.visibleWeeks / 4)); // Scroll by 1/4 of visible weeks
             
@@ -511,8 +478,6 @@
             this.updateChartData();
             this.updateScrollbarPosition();
         }
-        
-
         
         showLoading() {
             this.container.find('.artist-charts-loading').show();
@@ -641,29 +606,36 @@
         
         showError(message) {
             this.container.find('.error-message').text(message);
-            this.container.find('.artist-songs-error').show();
+            this.container.find('.artist-charts-error').show();
         }
         
         hideError() {
-            this.container.find('.artist-songs-error').hide();
+            this.container.find('.artist-charts-error').hide();
         }
     }
     
     // Initialize artist charts when DOM is ready
     $(document).ready(function() {
+        console.log('DOM ready, waiting for Chart.js...');
+        
         // Wait for Chart.js to be available
         const waitForChartJS = () => {
             if (typeof Chart !== 'undefined') {
+                console.log('Chart.js found, initializing...');
+                
                 // Chart.js is available, initialize charts
                 $('.artist-charts-container').each(function() {
+                    console.log('Creating ArtistCharts instance');
                     new ArtistCharts($(this));
                 });
                 
                 // Initialize artist songs
                 $('.artist-songs-container').each(function() {
+                    console.log('Creating ArtistSongs instance');
                     new ArtistSongs($(this));
                 });
             } else {
+                console.log('Chart.js not found, waiting...');
                 // Wait a bit more and try again
                 setTimeout(waitForChartJS, 100);
             }

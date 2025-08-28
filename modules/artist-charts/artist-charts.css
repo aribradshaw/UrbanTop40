@@ -124,7 +124,7 @@
     padding: 20px;
     margin-bottom: 20px;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: transform 0.3s ease;
 }
 
@@ -145,6 +145,7 @@
     position: relative;
     height: 400px;
     width: 100%;
+    margin-bottom: 20px;
 }
 
 #artist-chart-canvas {
@@ -170,8 +171,11 @@
 
 /* Chart Scrollbar */
 .chart-scrollbar {
-    margin-top: 15px;
+    position: relative;
+    margin-top: 20px;
     padding: 0 10px;
+    z-index: 5;
+    clear: both;
 }
 
 .scrollbar-track {
