@@ -125,7 +125,7 @@
                                     if (point.isGap) {
                                         return `${songName}: ${point.gapWeeks} week gap`;
                                     } else {
-                                        const position = 101 - context.parsed.y;
+                                        const position = context.parsed.y;
                                         return `${songName}: #${position}`;
                                     }
                                 }
@@ -192,7 +192,7 @@
                             }
                         },
                         y: {
-                            reverse: true,
+                            reverse: true, // #1 at top, #100 at bottom
                             min: 1,
                             max: 100,
                             grid: {
@@ -216,7 +216,8 @@
                             }
                         },
                         line: {
-                            tension: 0.1
+                            tension: 0.1,
+                            spanGaps: false // Don't connect lines across gaps
                         }
                     }
                 }
@@ -269,6 +270,7 @@
         createSongDataWithGaps(song, visibleDates) {
             const data = [];
             let lastEntry = null;
+            let lastValidIndex = -1;
             
             for (let i = 0; i < visibleDates.length; i++) {
                 const currentDate = visibleDates[i];
@@ -278,9 +280,10 @@
                     // Add the actual chart entry
                     data.push({
                         x: new Date(currentDate),
-                        y: 101 - entry.position
+                        y: entry.position // Use actual position (1-100), Chart.js will handle the display
                     });
                     lastEntry = entry;
+                    lastValidIndex = data.length - 1;
                 } else if (lastEntry) {
                     // Check if this is a significant gap (more than 2 weeks)
                     const lastDate = new Date(lastEntry.date);
@@ -291,12 +294,17 @@
                         // Add a gap label point
                         data.push({
                             x: new Date(currentDate),
-                            y: 101 - lastEntry.position, // Keep same Y position for visual continuity
+                            y: lastEntry.position, // Keep same Y position for visual continuity
                             isGap: true,
                             gapWeeks: weekDiff
                         });
                     }
                 }
+            }
+            
+            // Remove any trailing gap points to prevent horizontal lines extending beyond data
+            while (data.length > 0 && data[data.length - 1].isGap) {
+                data.pop();
             }
             
             return data;
@@ -350,9 +358,11 @@
             let newStartWeek = this.startWeek + (delta * scrollAmount);
             
             // Clamp to valid range
-            newStartWeek = Math.max(0, Math.min(this.allDates.length - this.visibleWeeks, newStartWeek));
+            const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
+            newStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
             
             if (newStartWeek !== this.startWeek) {
+                console.log(`Horizontal scroll: ${this.startWeek} -> ${newStartWeek}`);
                 this.startWeek = newStartWeek;
                 this.updateChartData();
                 this.updateScrollbarPosition();
@@ -393,13 +403,17 @@
             }
             
             if (scrollbarThumb.length) {
-                scrollbarThumb.css('left', this.getScrollbarPosition() + '%');
+                const position = this.getScrollbarPosition();
+                console.log(`Scrollbar position: ${position}%, startWeek: ${this.startWeek}, visibleWeeks: ${this.visibleWeeks}, totalWeeks: ${this.allDates.length}`);
+                scrollbarThumb.css('left', position + '%');
             }
         }
         
         getScrollbarPosition() {
             if (this.allDates.length <= this.visibleWeeks) return 0;
-            return (this.startWeek / (this.allDates.length - this.visibleWeeks)) * 100;
+            const maxStartWeek = this.allDates.length - this.visibleWeeks;
+            if (maxStartWeek <= 0) return 0;
+            return (this.startWeek / maxStartWeek) * 100;
         }
         
         makeScrollbarDraggable() {
