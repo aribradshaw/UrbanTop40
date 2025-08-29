@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
 
 class UrbanTop40_ArtistCharts {
     
-    public function __init__() {
+    public function __construct() {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_shortcode('artist_charts', array($this, 'render_artist_charts'));
         add_shortcode('artist_songs', array($this, 'render_artist_songs'));
@@ -104,6 +104,9 @@ class UrbanTop40_ArtistCharts {
             true
         );
         
+        // Ensure jQuery is loaded in footer
+        wp_enqueue_script('jquery');
+        
         wp_enqueue_style(
             'artist-charts-css',
             plugin_dir_url(__FILE__) . 'artist-charts.css',
@@ -112,6 +115,12 @@ class UrbanTop40_ArtistCharts {
         );
         
         // Localize script with AJAX URL and nonce
+        wp_localize_script('artist-charts-main', 'artistChartsAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('artist_charts_nonce')
+        ));
+        
+        // Also localize to the main artist-charts-js script
         wp_localize_script('artist-charts-js', 'artistChartsAjax', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('artist_charts_nonce')
@@ -306,4 +315,3 @@ class UrbanTop40_ArtistCharts {
 
 // Initialize the module
 $urban_top40_artist_charts = new UrbanTop40_ArtistCharts();
-$urban_top40_artist_charts->__init__();

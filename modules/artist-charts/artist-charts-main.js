@@ -71,6 +71,11 @@ class ArtistCharts {
         this.hideContent();
         
         try {
+            // Check if AJAX data is available
+            if (typeof artistChartsAjax === 'undefined') {
+                throw new Error('AJAX configuration not loaded. Please refresh the page.');
+            }
+            
             const response = await $.ajax({
                 url: artistChartsAjax.ajaxurl,
                 type: 'POST',

@@ -21,24 +21,38 @@
     
     // Load modules in dependency order
     function loadModules() {
+        console.log('Loading modules...');
+        
         // Load data processor first
         if (typeof ChartDataProcessor !== 'undefined') {
             modules.ChartDataProcessor = ChartDataProcessor;
+            console.log('✓ ChartDataProcessor loaded');
+        } else {
+            console.log('✗ ChartDataProcessor not found');
         }
         
         // Load scrollbar module
         if (typeof ChartScrollbar !== 'undefined') {
             modules.ChartScrollbar = ChartScrollbar;
+            console.log('✓ ChartScrollbar loaded');
+        } else {
+            console.log('✗ ChartScrollbar not found');
         }
         
         // Load chart core module
         if (typeof ChartCore !== 'undefined') {
             modules.ChartCore = ChartCore;
+            console.log('✓ ChartCore loaded');
+        } else {
+            console.log('✗ ChartCore not found');
         }
         
         // Load main artist charts module
         if (typeof ArtistCharts !== 'undefined') {
             modules.ArtistCharts = ArtistCharts;
+            console.log('✓ ArtistCharts loaded');
+        } else {
+            console.log('✗ ArtistCharts not found');
         }
         
         // Check if all modules are loaded
@@ -60,17 +74,63 @@
     function initializeSystem() {
         console.log('Initializing artist charts system...');
         
+        // Check if we have the required modules
+        if (!modules.ArtistCharts) {
+            console.error('ArtistCharts module not available!');
+            return;
+        }
+        
         // Initialize artist charts
         $('.artist-charts-container').each(function() {
             console.log('Creating ArtistCharts instance');
-            new modules.ArtistCharts($(this));
+            try {
+                new modules.ArtistCharts($(this));
+                console.log('✓ ArtistCharts instance created successfully');
+            } catch (error) {
+                console.error('✗ Failed to create ArtistCharts instance:', error);
+            }
         });
         
         // Initialize artist songs
         $('.artist-songs-container').each(function() {
             console.log('Creating ArtistSongs instance');
-            new ArtistSongs($(this));
+            try {
+                new ArtistSongs($(this));
+                console.log('✓ ArtistSongs instance created successfully');
+            } catch (error) {
+                console.error('✗ Failed to create ArtistSongs instance:', error);
+            }
         });
+    }
+    
+    function initializeSimpleSystem() {
+        console.log('Initializing simple system...');
+        
+        // Initialize artist songs directly
+        $('.artist-songs-container').each(function() {
+            console.log('Creating ArtistSongs instance');
+            try {
+                new ArtistSongs($(this));
+                console.log('✓ ArtistSongs instance created successfully');
+            } catch (error) {
+                console.error('✗ Failed to create ArtistSongs instance:', error);
+            }
+        });
+        
+        // Try to initialize artist charts if modules are available
+        if (typeof ArtistCharts !== 'undefined') {
+            $('.artist-charts-container').each(function() {
+                console.log('Creating ArtistCharts instance');
+                try {
+                    new ArtistCharts($(this));
+                    console.log('✓ ArtistCharts instance created successfully');
+                } catch (error) {
+                    console.error('✗ Failed to create ArtistCharts instance:', error);
+                }
+            });
+        } else {
+            console.log('ArtistCharts module not available, skipping charts');
+        }
     }
     
     // ========================================
@@ -104,6 +164,11 @@
             this.hideContent();
             
             try {
+                // Check if AJAX data is available
+                if (typeof artistChartsAjax === 'undefined') {
+                    throw new Error('AJAX configuration not loaded. Please refresh the page.');
+                }
+                
                 const response = await $.ajax({
                     url: artistChartsAjax.ajaxurl,
                     type: 'POST',
@@ -192,24 +257,37 @@
     
     // Initialize when DOM is ready
     $(document).ready(function() {
-        console.log('DOM ready, waiting for Chart.js and modules...');
+        console.log('DOM ready, checking dependencies...');
+        console.log('jQuery available:', typeof $ !== 'undefined');
+        console.log('Chart.js available:', typeof Chart !== 'undefined');
+        console.log('AJAX data available:', typeof artistChartsAjax !== 'undefined');
         
-        // Wait for Chart.js to be available
-        const waitForChartJS = () => {
-            if (typeof Chart !== 'undefined') {
-                console.log('Chart.js found, loading modules...');
+        // Test basic jQuery functionality
+        if (typeof $ !== 'undefined') {
+            console.log('jQuery is working, testing basic functionality...');
+            $('body').append('<div id="jquery-test" style="display:none;">jQuery test</div>');
+            if ($('#jquery-test').length > 0) {
+                console.log('jQuery DOM manipulation working');
+                $('#jquery-test').remove();
+            }
+        }
+        
+        // Simple initialization - just wait for Chart.js and AJAX data
+        const waitForDependencies = () => {
+            if (typeof Chart !== 'undefined' && typeof artistChartsAjax !== 'undefined') {
+                console.log('All dependencies found, initializing system...');
                 
-                // Start loading modules
-                loadModules();
+                // Simple initialization without complex module loading
+                initializeSimpleSystem();
             } else {
-                console.log('Chart.js not found, waiting...');
+                console.log('Waiting for dependencies... Chart.js:', typeof Chart !== 'undefined', 'AJAX:', typeof artistChartsAjax !== 'undefined');
                 // Wait a bit more and try again
-                setTimeout(waitForChartJS, 100);
+                setTimeout(waitForDependencies, 100);
             }
         };
         
-        // Start waiting for Chart.js
-        waitForChartJS();
+        // Start waiting for dependencies
+        waitForDependencies();
     });
     
 })(jQuery);
