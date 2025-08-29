@@ -76,11 +76,11 @@ class ChartCore {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                        titleColor: '#E8BE3E',
+                        bodyColor: '#ffffff',
+                        borderColor: '#E8BE3E',
+                        borderWidth: 2,
                         callbacks: {
                             title: (tooltipItems) => {
                                 return `Week of ${tooltipItems[0].label}`;
@@ -103,10 +103,10 @@ class ChartCore {
                             }
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(232, 190, 62, 0.2)'
                         },
                         ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            color: '#E8BE3E',
                             maxRotation: 45
                         },
                         min: startDate,
@@ -117,10 +117,10 @@ class ChartCore {
                         min: 1,
                         max: 100,
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(232, 190, 62, 0.2)'
                         },
                         ticks: {
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            color: '#E8BE3E',
                             callback: (value) => `#${value}`
                         }
                     }
