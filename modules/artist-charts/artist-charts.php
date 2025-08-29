@@ -141,11 +141,23 @@ class UrbanTop40_ArtistCharts {
         $width = sanitize_text_field($atts['width']);
         $height = sanitize_text_field($atts['height']);
         
+        // Debug: Log the shortcode attributes
+        error_log('Artist Charts Shortcode - Raw atts: ' . print_r($atts, true));
+        error_log('Artist Charts Shortcode - Processed artist: ' . $artist);
+        
         ob_start();
         ?>
         <div class="artist-charts-container" 
              data-artist="<?php echo esc_attr($artist); ?>"
              style="width: <?php echo esc_attr($width); ?>; height: <?php echo esc_attr($height); ?>;">
+            
+            <!-- Debug info (remove after testing) -->
+            <div style="background: #ffeb3b; padding: 10px; margin: 10px; border: 2px solid #f57f17; font-family: monospace; font-size: 12px;">
+                <strong>DEBUG:</strong><br>
+                Raw atts: <?php echo esc_html(print_r($atts, true)); ?><br>
+                Processed artist: <?php echo esc_html($artist); ?><br>
+                data-artist: <?php echo esc_attr($artist); ?>
+            </div>
             
             <div class="artist-charts-header">
                 <div class="artist-charts-title-section">

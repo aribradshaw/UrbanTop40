@@ -85,6 +85,8 @@
             console.log('Creating ArtistCharts instance');
             try {
                 const artist = $(this).data('artist') || 'the beatles';
+                console.log('Artist Charts - Container data-artist attribute:', $(this).attr('data-artist'));
+                console.log('Artist Charts - Extracted artist name:', artist);
                 new modules.ArtistCharts($(this), artist);
                 console.log('✓ ArtistCharts instance created successfully for artist:', artist);
             } catch (error) {
