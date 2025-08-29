@@ -106,8 +106,7 @@ class ChartCore {
                                 
                                 // Validate the date
                                 if (!date || isNaN(date.getTime())) {
-                                    console.warn('Invalid date in tooltip:', tooltipItem);
-                                    return 'Date unavailable';
+                                    return 'Week';
                                 }
                                 
                                 return date.toLocaleDateString('en-US', { 
@@ -192,6 +191,17 @@ class ChartCore {
                 }
             }
         });
+        
+        // Add event listener for chart updates
+        this.chart.options.onHover = (event, elements) => {
+            // Trigger week indicator update when hovering
+            if (this.container.closest('.artist-charts-container').length > 0) {
+                const artistChartsInstance = this.container.closest('.artist-charts-container').data('artist-charts-instance');
+                if (artistChartsInstance && artistChartsInstance.updateWeekIndicator) {
+                    artistChartsInstance.updateWeekIndicator();
+                }
+            }
+        };
         
         // Ensure the chart respects data boundaries
         this.enforceBoundaries();
