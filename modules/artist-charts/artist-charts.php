@@ -170,8 +170,8 @@ class UrbanTop40_ArtistCharts {
             
             <div class="artist-charts-content" style="display: none;">
                 <div class="chart-area" id="chart-area">
-                    <div class="zoom-hint">Scroll wheel to zoom • Shift+Scroll to pan • Trackpad horizontal scroll • Drag scrollbar below • Gap labels show on X-axis</div>
                     <div class="chart-container" id="chart-container"></div>
+                    <div class="zoom-hint-subtle">Scroll to zoom • Shift+Scroll to pan</div>
                 </div>
             </div>
         </div>

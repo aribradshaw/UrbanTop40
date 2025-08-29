@@ -72,46 +72,34 @@ class ChartDataProcessor {
      */
     static createSongDataWithBreaks(song, visibleDates) {
         const data = [];
-        let lastEntry = null;
         let currentDataset = [];
-        let gapAdded = false;
         
         for (let i = 0; i < visibleDates.length; i++) {
             const currentDate = visibleDates[i];
-            const entry = song.chartHistory.find(e => e.date === currentDate);
             
-            if (entry) {
-                // Add the actual chart entry
-                currentDataset.push({
-                    x: new Date(currentDate),
-                    y: entry.position
-                });
-                lastEntry = entry;
-                gapAdded = false;
-            } else if (lastEntry && !gapAdded) {
-                // Check if this is a significant gap (more than 2 weeks)
-                const lastDate = new Date(lastEntry.date);
-                const currentDateObj = new Date(currentDate);
-                const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
+            if (typeof currentDate === 'object' && currentDate.isGap) {
+                // This is a gap label, end current dataset and add gap
+                if (currentDataset.length > 0) {
+                    data.push(currentDataset);
+                    currentDataset = [];
+                }
                 
-                if (weekDiff > 2) {
-                    // End the current dataset and start a new one
-                    if (currentDataset.length > 0) {
-                        data.push(currentDataset);
-                        currentDataset = [];
-                    }
-                    
-                    // Add a gap label point for the X-axis (only once per gap period)
-                    data.push({
+                // Add gap label
+                data.push({
+                    x: new Date(currentDate.date),
+                    y: null,
+                    isGap: true,
+                    gapWeeks: currentDate.gapWeeks,
+                    isLabel: true
+                });
+            } else {
+                // This is a regular date, look for chart entry
+                const entry = song.chartHistory.find(e => e.date === currentDate);
+                if (entry) {
+                    currentDataset.push({
                         x: new Date(currentDate),
-                        y: null,
-                        isGap: true,
-                        gapWeeks: weekDiff,
-                        isLabel: true
+                        y: entry.position
                     });
-                    
-                    lastEntry = null;
-                    gapAdded = true;
                 }
             }
         }
@@ -138,30 +126,48 @@ class ChartDataProcessor {
             });
         });
         
-        // Find significant gaps and condense them
+        // Find significant gaps and condense them - be more aggressive
         const condensedDates = [];
         let lastDataDate = null;
+        let gapStartDate = null;
+        let gapWeeks = 0;
         
         for (let i = 0; i < allDates.length; i++) {
             const currentDate = allDates[i];
             
             if (dataDates.has(currentDate)) {
-                // This date has chart data, include it
+                // This date has chart data
+                if (gapStartDate && gapWeeks > 1) {
+                    // Add a single gap label for the entire gap period
+                    condensedDates.push({
+                        date: gapStartDate,
+                        isGap: true,
+                        gapWeeks: gapWeeks
+                    });
+                    gapStartDate = null;
+                    gapWeeks = 0;
+                }
+                
                 condensedDates.push(currentDate);
                 lastDataDate = currentDate;
-            } else if (lastDataDate) {
-                // Check if this is a significant gap
-                const lastDate = new Date(lastDataDate);
-                const currentDateObj = new Date(currentDate);
-                const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
-                
-                if (weekDiff > 2) {
-                    // Add a gap label date (only once per gap period)
-                    if (!condensedDates.includes(currentDate)) {
-                        condensedDates.push(currentDate);
-                    }
+            } else {
+                // This is a blank week
+                if (!gapStartDate) {
+                    gapStartDate = currentDate;
+                    gapWeeks = 1;
+                } else {
+                    gapWeeks++;
                 }
             }
+        }
+        
+        // Handle any remaining gap at the end
+        if (gapStartDate && gapWeeks > 1) {
+            condensedDates.push({
+                date: gapStartDate,
+                isGap: true,
+                gapWeeks: gapWeeks
+            });
         }
         
         return condensedDates;
