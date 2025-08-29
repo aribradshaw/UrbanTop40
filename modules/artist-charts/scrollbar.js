@@ -116,11 +116,17 @@ class ChartScrollbar {
             // Calculate which week to start from based on scrollbar position
             const startWeek = Math.round((percentage / 100) * maxStartWeek);
             
+            // Get the start and end dates for this week range
+            const startDate = new Date(chartCore.allDates[startWeek]);
+            const endWeek = Math.min(startWeek + visibleWeeks, totalWeeks);
+            const endDate = new Date(chartCore.allDates[endWeek - 1]);
+            
             // Update the chart to show the new week range
-            chartCore.updateChartData({
-                startWeek: startWeek,
-                visibleWeeks: visibleWeeks
-            });
+            if (chartCore.chart) {
+                chartCore.chart.options.scales.x.min = startDate;
+                chartCore.chart.options.scales.x.max = endDate;
+                chartCore.chart.update('none');
+            }
             
             // Update the week indicator
             if (this.chartInstance.updateWeekIndicator) {

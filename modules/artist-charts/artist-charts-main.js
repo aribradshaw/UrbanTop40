@@ -44,6 +44,9 @@ class ArtistCharts {
             if (e.shiftKey) {
                 // Shift + wheel = horizontal panning
                 this.handlePan(e);
+            } else if (Math.abs(e.originalEvent.deltaX) > Math.abs(e.originalEvent.deltaY)) {
+                // Horizontal scrolling (trackpad)
+                this.handleHorizontalScroll(e);
             } else {
                 // Regular wheel = zoom
                 this.handleZoom(e);
@@ -141,12 +144,15 @@ class ArtistCharts {
             const newRange = range * delta;
             
             // Calculate new min and max dates
-            const newMin = new Date(center.getTime() - (newRange / 2));
-            const newMax = new Date(center.getTime() + (newRange / 2));
+            let newMin = new Date(center.getTime() - (newRange / 2));
+            let newMax = new Date(center.getTime() + (newRange / 2));
+            
+            // Constrain to data boundaries
+            const constrained = this.chartCore.constrainZoom(newMin, newMax);
             
             // Update chart scale
-            chart.options.scales.x.min = newMin;
-            chart.options.scales.x.max = newMax;
+            chart.options.scales.x.min = constrained.min;
+            chart.options.scales.x.max = constrained.max;
             chart.update('none');
             
             // Update week indicator
@@ -169,12 +175,47 @@ class ArtistCharts {
             const shift = range * 0.1 * delta;
             
             // Calculate new min and max dates
-            const newMin = new Date(currentMin.getTime() + shift);
-            const newMax = new Date(currentMax.getTime() + shift);
+            let newMin = new Date(currentMin.getTime() + shift);
+            let newMax = new Date(currentMax.getTime() + shift);
+            
+            // Constrain to data boundaries
+            const constrained = this.chartCore.constrainPan(newMin, newMax);
             
             // Update chart scale
-            chart.options.scales.x.min = newMin;
-            chart.options.scales.x.max = newMax;
+            chart.options.scales.x.min = constrained.min;
+            chart.options.scales.x.max = constrained.max;
+            chart.update('none');
+            
+            // Update week indicator
+            this.updateWeekIndicator();
+        }
+    }
+    
+    // Handle horizontal scrolling (trackpad or mouse wheel with shift)
+    handleHorizontalScroll(e) {
+        if (!this.chartCore || !this.chartCore.chart) return;
+        
+        const delta = e.originalEvent.deltaX || e.originalEvent.deltaY;
+        const chart = this.chartCore.chart;
+        
+        // Get current scale range
+        const currentMin = chart.options.scales.x.min;
+        const currentMax = chart.options.scales.x.max;
+        
+        if (currentMin && currentMax) {
+            const range = currentMax - currentMin;
+            const shift = range * 0.1 * (delta > 0 ? 1 : -1);
+            
+            // Calculate new min and max dates
+            let newMin = new Date(currentMin.getTime() + shift);
+            let newMax = new Date(currentMax.getTime() + shift);
+            
+            // Constrain to data boundaries
+            const constrained = this.chartCore.constrainPan(newMin, newMax);
+            
+            // Update chart scale
+            chart.options.scales.x.min = constrained.min;
+            chart.options.scales.x.max = constrained.max;
             chart.update('none');
             
             // Update week indicator

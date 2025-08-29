@@ -174,6 +174,7 @@ class ChartCore {
     createSongDataWithBreaks(song) {
         const data = [];
         let lastPosition = null;
+        let lastDate = null;
         
         // Sort chart history by date
         const sortedHistory = song.chartHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -182,13 +183,19 @@ class ChartCore {
             const currentDate = new Date(entry.date);
             const currentPosition = entry.position;
             
-            // Check if this is a re-entry after falling off chart
-            if (lastPosition !== null && lastPosition > 100) {
-                // Song fell off chart, add a break (null point)
-                data.push({
-                    x: currentDate,
-                    y: null
-                });
+            // Check if this is a re-entry after falling off chart OR if there's a large time gap
+            if (lastPosition !== null && lastDate !== null) {
+                const timeDiff = currentDate.getTime() - lastDate.getTime();
+                const weeksDiff = timeDiff / (7 * 24 * 60 * 60 * 1000);
+                
+                // Add break if song fell off chart (>100) OR if there's more than 26 weeks (6 months) gap
+                if (lastPosition > 100 || weeksDiff > 26) {
+                    // Add a break (null point) to prevent line connection
+                    data.push({
+                        x: currentDate,
+                        y: null
+                    });
+                }
             }
             
             // Add the current data point
@@ -198,9 +205,53 @@ class ChartCore {
             });
             
             lastPosition = currentPosition;
+            lastDate = currentDate;
         });
         
         return data;
+    }
+    
+    // Constrain zoom to stay within data boundaries
+    constrainZoom(newMin, newMax) {
+        const firstDate = new Date(this.allDates[0]);
+        const lastDate = new Date(this.allDates[this.allDates.length - 1]);
+        
+        // Ensure we don't go before the first data point
+        if (newMin < firstDate) {
+            const range = newMax - newMin;
+            newMin = firstDate;
+            newMax = new Date(firstDate.getTime() + range);
+        }
+        
+        // Ensure we don't go after the last data point
+        if (newMax > lastDate) {
+            const range = newMax - newMin;
+            newMax = lastDate;
+            newMin = new Date(lastDate.getTime() - range);
+        }
+        
+        return { min: newMin, max: newMax };
+    }
+    
+    // Constrain pan to stay within data boundaries
+    constrainPan(newMin, newMax) {
+        const firstDate = new Date(this.allDates[0]);
+        const lastDate = new Date(this.allDates[this.allDates.length - 1]);
+        const range = newMax - newMin;
+        
+        // Ensure we don't go before the first data point
+        if (newMin < firstDate) {
+            newMin = firstDate;
+            newMax = new Date(firstDate.getTime() + range);
+        }
+        
+        // Ensure we don't go after the last data point
+        if (newMax > lastDate) {
+            newMax = lastDate;
+            newMin = new Date(lastDate.getTime() - range);
+        }
+        
+        return { min: newMin, max: newMax };
     }
     
     updateChartData(newOptions = {}) {
