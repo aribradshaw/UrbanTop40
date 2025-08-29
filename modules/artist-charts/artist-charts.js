@@ -217,7 +217,16 @@
                             },
                             ticks: {
                                 color: 'rgba(255, 255, 255, 0.7)',
-                                maxRotation: 45
+                                maxRotation: 45,
+                                callback: (value, index, ticks) => {
+                                    // Check if this tick corresponds to a gap label
+                                    const date = new Date(value);
+                                    const gapLabel = this.findGapLabel(date);
+                                    if (gapLabel) {
+                                        return `${gapLabel.gapWeeks}w gap`;
+                                    }
+                                    return Chart.defaults.time.time.displayFormats.week;
+                                }
                             }
                         },
                         y: {
@@ -277,24 +286,34 @@
             const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
             const visibleDates = this.allDates.slice(this.startWeek, endWeek);
             
-            // Create datasets for each song
-            const datasets = this.chartData.songs.map((song, index) => {
-                const colors = [
-                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
-                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
-                ];
+            // Create datasets for each song (may have multiple datasets per song due to gaps)
+            const datasets = [];
+            const colors = [
+                '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+            ];
+            
+            this.chartData.songs.forEach((song, songIndex) => {
+                const songData = this.createSongDataWithBreaks(song, visibleDates);
+                const color = colors[songIndex % colors.length];
                 
-                const data = this.createSongDataWithBreaks(song, visibleDates);
-                
-                return {
-                    label: song.song,
-                    data: data,
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length],
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1
-                };
+                // Each song may have multiple datasets (separated by gaps)
+                songData.forEach((dataset, datasetIndex) => {
+                    if (dataset.isLabel) {
+                        // This is a gap label, don't create a dataset for it
+                        return;
+                    }
+                    
+                    datasets.push({
+                        label: song.song,
+                        data: dataset,
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1
+                    });
+                });
             });
             
             return { datasets };
@@ -303,6 +322,7 @@
         createSongDataWithBreaks(song, visibleDates) {
             const data = [];
             let lastEntry = null;
+            let currentDataset = [];
             
             for (let i = 0; i < visibleDates.length; i++) {
                 const currentDate = visibleDates[i];
@@ -310,7 +330,7 @@
                 
                 if (entry) {
                     // Add the actual chart entry
-                    data.push({
+                    currentDataset.push({
                         x: new Date(currentDate),
                         y: entry.position
                     });
@@ -322,21 +342,29 @@
                     const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
                     
                     if (weekDiff > 2) {
-                        // Instead of null, add a gap indicator that won't break Chart.js
+                        // End the current dataset and start a new one
+                        if (currentDataset.length > 0) {
+                            data.push(currentDataset);
+                            currentDataset = [];
+                        }
+                        
+                        // Add a gap label point for the X-axis
                         data.push({
                             x: new Date(currentDate),
-                            y: lastEntry.position,
+                            y: null,
                             isGap: true,
                             gapWeeks: weekDiff,
-                            skip: true // Custom property to indicate this point should be skipped
+                            isLabel: true
                         });
+                        
+                        lastEntry = null; // Reset to start fresh line
                     }
                 }
             }
             
-            // Remove any trailing gap points to prevent horizontal lines extending beyond data
-            while (data.length > 0 && data[data.length - 1] && data[data.length - 1].isGap) {
-                data.pop();
+            // Add the final dataset if it has data
+            if (currentDataset.length > 0) {
+                data.push(currentDataset);
             }
             
             return data;
@@ -360,7 +388,13 @@
             // Clamp between 5 and total available weeks
             this.visibleWeeks = Math.max(5, Math.min(this.allDates.length, newVisibleWeeks));
             
-            console.log(`Zoom: ${this.visibleWeeks} -> ${newVisibleWeeks} weeks`);
+            // Adjust startWeek if we're zooming out and would go beyond available data
+            const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
+            if (this.startWeek > maxStartWeek) {
+                this.startWeek = maxStartWeek;
+            }
+            
+            console.log(`Zoom: ${this.visibleWeeks} -> ${newVisibleWeeks} weeks, startWeek: ${this.startWeek}`);
             
             // Update the chart with new data
             this.updateChartData();
@@ -393,26 +427,33 @@
                 }
                 
                 // Create new datasets with proper data validation
-                const newDatasets = this.chartData.songs.map((song, index) => {
-                    const colors = [
-                        '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
-                        '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
-                    ];
+                const newDatasets = [];
+                const colors = [
+                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                    '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+                ];
+                
+                this.chartData.songs.forEach((song, songIndex) => {
+                    const songData = this.createSongDataWithBreaks(song, visibleDates);
+                    const color = colors[songIndex % colors.length];
                     
-                    const data = this.createSongDataWithBreaks(song, visibleDates);
-                    
-                    // Filter out any null or invalid data points
-                    const validData = data.filter(point => point !== null && point !== undefined);
-                    
-                    return {
-                        label: song.song,
-                        data: validData,
-                        borderColor: colors[index % colors.length],
-                        backgroundColor: colors[index % colors.length],
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1
-                    };
+                    // Each song may have multiple datasets (separated by gaps)
+                    songData.forEach((dataset, datasetIndex) => {
+                        if (dataset.isLabel) {
+                            // This is a gap label, don't create a dataset for it
+                            return;
+                        }
+                        
+                        newDatasets.push({
+                            label: song.song,
+                            data: dataset,
+                            borderColor: color,
+                            backgroundColor: color,
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        });
+                    });
                 });
                 
                 // Update the chart with new data
@@ -524,6 +565,22 @@
             
             // Adjust position so thumb doesn't go beyond track boundaries
             return Math.max(0, Math.min(100 - thumbWidthPercent, position));
+        }
+        
+        findGapLabel(date) {
+            // Find gap labels for the current visible date range
+            const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
+            const visibleDates = this.allDates.slice(this.startWeek, endWeek);
+            
+            for (const song of this.chartData.songs) {
+                const songData = this.createSongDataWithBreaks(song, visibleDates);
+                for (const item of songData) {
+                    if (item.isLabel && item.x && Math.abs(item.x - date) < (24 * 60 * 60 * 1000)) {
+                        return item;
+                    }
+                }
+            }
+            return null;
         }
         
         makeScrollbarDraggable() {

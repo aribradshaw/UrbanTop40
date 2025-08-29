@@ -107,7 +107,10 @@ class UrbanTop40_ArtistCharts {
              style="width: <?php echo esc_attr($width); ?>; height: <?php echo esc_attr($height); ?>;">
             
             <div class="artist-charts-header">
-                <h2 class="artist-charts-title"><?php echo esc_html(ucwords($artist)); ?> - Billboard Chart History</h2>
+                <div class="artist-charts-title-section">
+                    <h2 class="artist-charts-title"><?php echo esc_html(strtoupper($artist)); ?></h2>
+                    <div class="artist-charts-subtitle">Billboard Hot 100 Chart History</div>
+                </div>
                 <div class="artist-charts-controls">
                     <div class="chart-control-button" id="song-count">Loading...</div>
                     <div class="chart-control-button" id="week-count">Loading...</div>
@@ -126,7 +129,7 @@ class UrbanTop40_ArtistCharts {
             
             <div class="artist-charts-content" style="display: none;">
                 <div class="chart-area" id="chart-area">
-                    <div class="zoom-hint">Scroll wheel to zoom • Shift+Scroll to pan • Trackpad horizontal scroll • Drag scrollbar below</div>
+                    <div class="zoom-hint">Scroll wheel to zoom • Shift+Scroll to pan • Trackpad horizontal scroll • Drag scrollbar below • Gap labels show on X-axis</div>
                     <div class="chart-container" id="chart-container"></div>
                 </div>
             </div>
