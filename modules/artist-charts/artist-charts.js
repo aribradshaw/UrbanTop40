@@ -16,6 +16,7 @@
             this.visibleWeeks = 10; // Default to first 10 weeks
             this.startWeek = 0; // Which week to start from (for panning)
             this.allDates = [];
+            this.updateTimeout = null; // For debouncing chart updates
             
             this.init();
         }
@@ -57,6 +58,13 @@
             this.container.on('click', '.error-retry', () => {
                 this.loadArtistData();
             });
+            
+            // Handle window resize to prevent Chart.js errors
+            $(window).on('resize', () => {
+                if (this.chart) {
+                    this.chart.resize();
+                }
+            });
         }
         
         async loadArtistData() {
@@ -93,6 +101,12 @@
         
         renderChart() {
             if (!this.chartData) return;
+            
+            // Destroy existing chart if it exists
+            if (this.chart) {
+                this.chart.destroy();
+                this.chart = null;
+            }
             
             const chartContainer = this.container.find('#chart-container');
             chartContainer.empty();
@@ -223,17 +237,21 @@
                         point: {
                             radius: (context) => {
                                 const point = context.raw;
-                                return point && point.isGap ? 0 : 3; // Hide gap points
+                                return point && point.skip ? 0 : 3; // Hide gap points
                             },
                             hoverRadius: (context) => {
                                 const point = context.raw;
-                                return point && point.isGap ? 0 : 5; // Hide gap points on hover
+                                return point && point.skip ? 0 : 5; // Hide gap points on hover
                             }
                         },
                         line: {
                             tension: 0.1,
-                            spanGaps: false // Don't connect lines across gaps
+                            spanGaps: true // Connect lines but skip gap points
                         }
+                    },
+                    parsing: {
+                        xAxisKey: 'x',
+                        yAxisKey: 'y'
                     }
                 }
             });
@@ -304,15 +322,13 @@
                     const weekDiff = Math.round((currentDateObj - lastDate) / (7 * 24 * 60 * 60 * 1000));
                     
                     if (weekDiff > 2) {
-                        // Add a null point to break the line connection
-                        data.push(null);
-                        
-                        // Add a gap label point
+                        // Instead of null, add a gap indicator that won't break Chart.js
                         data.push({
                             x: new Date(currentDate),
                             y: lastEntry.position,
                             isGap: true,
-                            gapWeeks: weekDiff
+                            gapWeeks: weekDiff,
+                            skip: true // Custom property to indicate this point should be skipped
                         });
                     }
                 }
@@ -353,20 +369,64 @@
         updateChartData() {
             if (!this.chart || !this.chartData) return;
             
-            // Get the visible date range based on startWeek and visibleWeeks
-            const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
-            const visibleDates = this.allDates.slice(this.startWeek, endWeek);
+            // Clear any pending update
+            if (this.updateTimeout) {
+                clearTimeout(this.updateTimeout);
+            }
             
-            // Update each dataset with new data
-            this.chart.data.datasets.forEach((dataset, datasetIndex) => {
-                const song = this.chartData.songs[datasetIndex];
-                if (song) {
-                    dataset.data = this.createSongDataWithBreaks(song, visibleDates);
+            // Debounce the update to prevent rapid changes
+            this.updateTimeout = setTimeout(() => {
+                this._performChartUpdate();
+            }, 50); // 50ms delay
+        }
+        
+        _performChartUpdate() {
+            try {
+                // Get the visible date range based on startWeek and visibleWeeks
+                const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
+                const visibleDates = this.allDates.slice(this.startWeek, endWeek);
+                
+                // Validate that we have valid dates
+                if (!visibleDates || visibleDates.length === 0) {
+                    console.warn('No visible dates available for chart update');
+                    return;
                 }
-            });
-            
-            // Update the chart
-            this.chart.update('none');
+                
+                // Create new datasets with proper data validation
+                const newDatasets = this.chartData.songs.map((song, index) => {
+                    const colors = [
+                        '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+                        '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+                    ];
+                    
+                    const data = this.createSongDataWithBreaks(song, visibleDates);
+                    
+                    // Filter out any null or invalid data points
+                    const validData = data.filter(point => point !== null && point !== undefined);
+                    
+                    return {
+                        label: song.song,
+                        data: validData,
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: colors[index % colors.length],
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1
+                    };
+                });
+                
+                // Update the chart with new data
+                this.chart.data.datasets = newDatasets;
+                this.chart.data.labels = visibleDates.map(date => new Date(date));
+                
+                // Use a more stable update method
+                this.chart.update('none');
+                
+            } catch (error) {
+                console.error('Error updating chart data:', error);
+                // Fallback: recreate the chart if update fails
+                this.renderChart();
+            }
         }
         
         handleHorizontalScroll(e) {
@@ -564,7 +624,7 @@
             // Adjust percentage so clicking positions the thumb center at click point
             percentage = Math.max(thumbWidthPercent / 2, Math.min(100 - thumbWidthPercent / 2, percentage));
             
-            console.log(`Scrollbar click: clickX=${clickX}, trackWidth=${trackWidth}, percentage=${percentage}`);
+            console.log(`Scrollbar click: clickX=${clickX}, trackWidth=${trackWidth}, percentage=${percentage}, adjusted=${percentage}`);
             this.setScrollbarPosition(percentage);
         }
         
@@ -575,6 +635,7 @@
             const trackWidth = trackRect.width;
             
             const percentage = Math.max(0, Math.min(100, (dragX / trackWidth) * 100));
+            console.log(`Scrollbar drag: dragX=${dragX}, trackWidth=${trackWidth}, percentage=${percentage}`);
             this.setScrollbarPosition(percentage);
         }
 
@@ -610,11 +671,19 @@
             if (this.allDates.length <= this.visibleWeeks) return;
             
             const maxStartWeek = this.allDates.length - this.visibleWeeks;
-            this.startWeek = Math.round((percentage / 100) * maxStartWeek);
-            this.startWeek = Math.max(0, Math.min(maxStartWeek, this.startWeek));
+            const newStartWeek = Math.round((percentage / 100) * maxStartWeek);
+            const clampedStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
             
-            this.updateChartData();
-            this.updateScrollbarPosition();
+            if (clampedStartWeek !== this.startWeek) {
+                console.log(`Setting scrollbar position: ${percentage}% -> week ${clampedStartWeek}`);
+                this.startWeek = clampedStartWeek;
+                
+                // Update the chart data
+                this.updateChartData();
+                
+                // Update the week indicator and scrollbar position
+                this.updateScrollbarPosition();
+            }
         }
         
         showLoading() {
@@ -640,6 +709,24 @@
         
         hideError() {
             this.container.find('.artist-charts-error').hide();
+        }
+        
+        // Cleanup method to prevent memory leaks
+        destroy() {
+            if (this.updateTimeout) {
+                clearTimeout(this.updateTimeout);
+                this.updateTimeout = null;
+            }
+            
+            if (this.chart) {
+                this.chart.destroy();
+                this.chart = null;
+            }
+            
+            // Remove event listeners
+            this.container.off();
+            $(document).off('mousemove mousemove touchmove touchend');
+            $(window).off('resize');
         }
     }
     
