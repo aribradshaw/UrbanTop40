@@ -131,15 +131,26 @@ class ArtistCharts {
         const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
         const chart = this.chartCore.chart;
         
-        // Simple zoom by adjusting the chart's scale
-        if (chart.options.scales.x.min && chart.options.scales.x.max) {
-            const range = chart.options.scales.x.max - chart.options.scales.x.min;
-            const center = (chart.options.scales.x.min + chart.options.scales.x.max) / 2;
+        // Get current scale range
+        const currentMin = chart.options.scales.x.min;
+        const currentMax = chart.options.scales.x.max;
+        
+        if (currentMin && currentMax) {
+            const range = currentMax - currentMin;
+            const center = new Date((currentMin.getTime() + currentMax.getTime()) / 2);
             const newRange = range * delta;
             
-            chart.options.scales.x.min = center - newRange / 2;
-            chart.options.scales.x.max = center + newRange / 2;
+            // Calculate new min and max dates
+            const newMin = new Date(center.getTime() - (newRange / 2));
+            const newMax = new Date(center.getTime() + (newRange / 2));
+            
+            // Update chart scale
+            chart.options.scales.x.min = newMin;
+            chart.options.scales.x.max = newMax;
             chart.update('none');
+            
+            // Update week indicator
+            this.updateWeekIndicator();
         }
     }
     
@@ -149,14 +160,25 @@ class ArtistCharts {
         const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
         const chart = this.chartCore.chart;
         
-        // Simple pan by shifting the chart's scale
-        if (chart.options.scales.x.max) {
-            const range = chart.options.scales.x.max - chart.options.scales.x.min;
+        // Get current scale range
+        const currentMin = chart.options.scales.x.min;
+        const currentMax = chart.options.scales.x.max;
+        
+        if (currentMin && currentMax) {
+            const range = currentMax - currentMin;
             const shift = range * 0.1 * delta;
             
-            chart.options.scales.x.min += shift;
-            chart.options.scales.x.max += shift;
+            // Calculate new min and max dates
+            const newMin = new Date(currentMin.getTime() + shift);
+            const newMax = new Date(currentMax.getTime() + shift);
+            
+            // Update chart scale
+            chart.options.scales.x.min = newMin;
+            chart.options.scales.x.max = newMax;
             chart.update('none');
+            
+            // Update week indicator
+            this.updateWeekIndicator();
         }
     }
     
@@ -181,16 +203,12 @@ class ArtistCharts {
         const chartContainer = this.container.find('#chart-container');
         
         // Add week indicator above chart
-        const totalWeeks = this.chartData.songs.reduce((total, song) => {
-            return total + song.chartHistory.length;
-        }, 0);
-        
-        const weekIndicator = $(`
+        this.weekIndicator = $(`
             <div class="week-indicator">
-                <span class="week-range">Total Chart Weeks: ${totalWeeks}</span>
+                <span class="week-range">Loading...</span>
             </div>
         `);
-        chartContainer.before(weekIndicator);
+        chartContainer.before(this.weekIndicator);
         
         // Initialize scrollbar if available
         if (typeof ChartScrollbar !== 'undefined') {
@@ -206,6 +224,47 @@ class ArtistCharts {
             </div>
         `);
         chartContainer.after(zoomHint);
+        
+        // Update week indicator after chart is created
+        setTimeout(() => this.updateWeekIndicator(), 100);
+    }
+    
+    updateWeekIndicator() {
+        if (!this.weekIndicator || !this.chartCore || !this.chartCore.chart) return;
+        
+        const chart = this.chartCore.chart;
+        const currentMin = chart.options.scales.x.min;
+        const currentMax = chart.options.scales.x.max;
+        
+        if (currentMin && currentMax) {
+            const totalWeeks = this.chartCore.allDates.length;
+            const startWeek = this.chartCore.allDates.findIndex(date => 
+                Math.abs(new Date(date) - currentMin) < (24 * 60 * 60 * 1000)
+            );
+            const endWeek = this.chartCore.allDates.findIndex(date => 
+                Math.abs(new Date(date) - currentMax) < (24 * 60 * 60 * 1000)
+            );
+            
+            const weekText = `Weeks ${startWeek + 1}-${endWeek + 1} of ${totalWeeks}`;
+            this.weekIndicator.find('.week-range').text(weekText);
+            
+            // Update scrollbar position if available
+            if (this.scrollbar) {
+                this.updateScrollbarPosition(startWeek, totalWeeks);
+            }
+        }
+    }
+    
+    updateScrollbarPosition(startWeek, totalWeeks) {
+        if (!this.scrollbar || !this.chartCore) return;
+        
+        const visibleWeeks = this.chartCore.visibleWeeks;
+        const maxStartWeek = Math.max(0, totalWeeks - visibleWeeks);
+        
+        if (maxStartWeek > 0) {
+            const percentage = (startWeek / maxStartWeek) * 100;
+            this.scrollbar.updateThumbPosition(percentage);
+        }
     }
     
     showLoading() {

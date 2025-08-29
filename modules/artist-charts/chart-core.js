@@ -13,6 +13,9 @@ class ChartCore {
         this.chartData = chartData;
         this.options = options;
         this.chart = null;
+        this.allDates = [];
+        this.visibleWeeks = options.visibleWeeks || 10;
+        this.startWeek = options.startWeek || 0;
         
         this.init();
     }
@@ -41,6 +44,21 @@ class ChartCore {
         
         // Prepare data for Chart.js
         const chartData = this.prepareChartData();
+        
+        // Get all unique dates and sort them
+        this.allDates = new Set();
+        this.chartData.songs.forEach(song => {
+            song.chartHistory.forEach(entry => {
+                this.allDates.add(entry.date);
+            });
+        });
+        this.allDates = Array.from(this.allDates).sort();
+        
+        // Calculate initial visible range
+        const totalWeeks = this.allDates.length;
+        const endWeek = Math.min(this.startWeek + this.visibleWeeks, totalWeeks);
+        const startDate = new Date(this.allDates[this.startWeek]);
+        const endDate = new Date(this.allDates[endWeek - 1]);
         
         // Create the chart
         this.chart = new Chart(ctx, {
@@ -91,8 +109,8 @@ class ChartCore {
                             color: 'rgba(255, 255, 255, 0.7)',
                             maxRotation: 45
                         },
-                        min: undefined,
-                        max: undefined
+                        min: startDate,
+                        max: endDate
                     },
                     y: {
                         reverse: true, // #1 at top, #100 at bottom
@@ -113,7 +131,8 @@ class ChartCore {
                         hoverRadius: 5
                     },
                     line: {
-                        tension: 0.1
+                        tension: 0.1,
+                        spanGaps: false // Don't connect lines across gaps
                     }
                 }
             }
@@ -133,11 +152,8 @@ class ChartCore {
         this.chartData.songs.forEach((song, songIndex) => {
             const color = colors[songIndex % colors.length];
             
-            // Create data points for this song
-            const data = song.chartHistory.map(entry => ({
-                x: new Date(entry.date),
-                y: entry.position
-            }));
+            // Create data points for this song, but break lines when songs fall off chart
+            const data = this.createSongDataWithBreaks(song);
             
             if (data.length > 0) {
                 datasets.push({
@@ -155,14 +171,58 @@ class ChartCore {
         return { datasets };
     }
     
+    createSongDataWithBreaks(song) {
+        const data = [];
+        let lastPosition = null;
+        
+        // Sort chart history by date
+        const sortedHistory = song.chartHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        sortedHistory.forEach((entry, index) => {
+            const currentDate = new Date(entry.date);
+            const currentPosition = entry.position;
+            
+            // Check if this is a re-entry after falling off chart
+            if (lastPosition !== null && lastPosition > 100) {
+                // Song fell off chart, add a break (null point)
+                data.push({
+                    x: currentDate,
+                    y: null
+                });
+            }
+            
+            // Add the current data point
+            data.push({
+                x: currentDate,
+                y: currentPosition
+            });
+            
+            lastPosition = currentPosition;
+        });
+        
+        return data;
+    }
+    
     updateChartData(newOptions = {}) {
         if (!this.chart) return;
         
         // Update options
         Object.assign(this.options, newOptions);
         
-        // Re-render with new data
-        this.renderChart();
+        // Update visible range
+        if (newOptions.startWeek !== undefined || newOptions.visibleWeeks !== undefined) {
+            this.startWeek = newOptions.startWeek || this.startWeek;
+            this.visibleWeeks = newOptions.visibleWeeks || this.visibleWeeks;
+            
+            const totalWeeks = this.allDates.length;
+            const endWeek = Math.min(this.startWeek + this.visibleWeeks, totalWeeks);
+            const startDate = new Date(this.allDates[this.startWeek]);
+            const endDate = new Date(this.allDates[endWeek - 1]);
+            
+            this.chart.options.scales.x.min = startDate;
+            this.chart.options.scales.x.max = endDate;
+            this.chart.update('none');
+        }
     }
     
     destroy() {

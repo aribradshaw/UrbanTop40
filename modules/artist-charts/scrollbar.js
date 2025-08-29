@@ -107,9 +107,25 @@ class ChartScrollbar {
     
     updateChartPosition(percentage) {
         // Update chart position based on scrollbar position
-        if (this.chartInstance && this.chartInstance.chart) {
-            // This will be implemented when we add chart navigation
-            console.log('Chart position updated:', percentage);
+        if (this.chartInstance && this.chartInstance.chartCore) {
+            const chartCore = this.chartInstance.chartCore;
+            const totalWeeks = chartCore.allDates.length;
+            const visibleWeeks = chartCore.visibleWeeks;
+            const maxStartWeek = Math.max(0, totalWeeks - visibleWeeks);
+            
+            // Calculate which week to start from based on scrollbar position
+            const startWeek = Math.round((percentage / 100) * maxStartWeek);
+            
+            // Update the chart to show the new week range
+            chartCore.updateChartData({
+                startWeek: startWeek,
+                visibleWeeks: visibleWeeks
+            });
+            
+            // Update the week indicator
+            if (this.chartInstance.updateWeekIndicator) {
+                this.chartInstance.updateWeekIndicator();
+            }
         }
     }
     
