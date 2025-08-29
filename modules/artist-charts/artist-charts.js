@@ -123,7 +123,10 @@
             // Create the chart
             this.chart = new Chart(ctx, {
                 type: 'line',
-                data: chartData,
+                data: {
+                    ...chartData,
+                    labels: this.consolidatedXAxis || []
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -156,50 +159,6 @@
                                         return `${songName}: #${position}`;
                                     }
                                 }
-                            }
-                        },
-                        customGapRenderer: {
-                            id: 'customGapRenderer',
-                            afterDraw: (chart) => {
-                                const ctx = chart.ctx;
-                                
-                                chart.data.datasets.forEach((dataset, datasetIndex) => {
-                                    const meta = chart.getDatasetMeta(datasetIndex);
-                                    if (!meta.data) return;
-                                    
-                                    meta.data.forEach((point, index) => {
-                                        const dataPoint = dataset.data[index];
-                                        if (dataPoint && dataPoint.isGap) {
-                                            // Draw gap label
-                                            ctx.save();
-                                            ctx.font = '12px Arial';
-                                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                                            ctx.textAlign = 'center';
-                                            ctx.textBaseline = 'middle';
-                                            
-                                            const x = point.x;
-                                            const y = point.y;
-                                            
-                                            // Draw background for text
-                                            const text = `${dataPoint.gapWeeks}w`;
-                                            const textMetrics = ctx.measureText(text);
-                                            const padding = 4;
-                                            
-                                            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                                            ctx.fillRect(
-                                                x - textMetrics.width/2 - padding,
-                                                y - 8 - padding,
-                                                textMetrics.width + padding * 2,
-                                                16 + padding * 2
-                                            );
-                                            
-                                            // Draw text
-                                            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                                            ctx.fillText(text, x, y - 8);
-                                            ctx.restore();
-                                        }
-                                    });
-                                });
                             }
                         }
                     },
@@ -298,6 +257,10 @@
                 '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
             ];
             
+            // Track all actual data points and gap labels for X-axis
+            const allChartPoints = new Set();
+            const gapLabels = [];
+            
             this.chartData.songs.forEach((song, songIndex) => {
                 const songData = this.createSongDataWithBreaks(song, visibleDates);
                 const color = colors[songIndex % colors.length];
@@ -305,9 +268,15 @@
                 // Each song may have multiple datasets (separated by gaps)
                 songData.forEach((dataset, datasetIndex) => {
                     if (dataset.isLabel) {
-                        // This is a gap label, don't create a dataset for it
+                        // This is a gap label, add it to our gap labels collection
+                        gapLabels.push(dataset);
                         return;
                     }
+                    
+                    // Add all data points to our collection
+                    dataset.forEach(point => {
+                        allChartPoints.add(point.x.getTime());
+                    });
                     
                     datasets.push({
                         label: song.song,
@@ -320,6 +289,25 @@
                     });
                 });
             });
+            
+            // Create a consolidated X-axis with only actual data points and gap labels
+            const xAxisData = [];
+            
+            // Add all actual chart data points
+            allChartPoints.forEach(timestamp => {
+                xAxisData.push(new Date(timestamp));
+            });
+            
+            // Add gap labels at appropriate positions
+            gapLabels.forEach(gapLabel => {
+                xAxisData.push(gapLabel.x);
+            });
+            
+            // Sort the X-axis data chronologically
+            xAxisData.sort((a, b) => a - b);
+            
+            // Store the consolidated X-axis data for use in tick callbacks
+            this.consolidatedXAxis = xAxisData;
             
             return { datasets };
         }
@@ -448,6 +436,10 @@
                     '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
                 ];
                 
+                // Track all actual data points and gap labels for X-axis
+                const allChartPoints = new Set();
+                const gapLabels = [];
+                
                 this.chartData.songs.forEach((song, songIndex) => {
                     const songData = this.createSongDataWithBreaks(song, visibleDates);
                     const color = colors[songIndex % colors.length];
@@ -455,9 +447,15 @@
                     // Each song may have multiple datasets (separated by gaps)
                     songData.forEach((dataset, datasetIndex) => {
                         if (dataset.isLabel) {
-                            // This is a gap label, don't create a dataset for it
+                            // This is a gap label, add it to our gap labels collection
+                            gapLabels.push(dataset);
                             return;
                         }
+                        
+                        // Add all data points to our collection
+                        dataset.forEach(point => {
+                            allChartPoints.add(point.x.getTime());
+                        });
                         
                         newDatasets.push({
                             label: song.song,
@@ -471,9 +469,28 @@
                     });
                 });
                 
+                // Create a consolidated X-axis with only actual data points and gap labels
+                const xAxisData = [];
+                
+                // Add all actual chart data points
+                allChartPoints.forEach(timestamp => {
+                    xAxisData.push(new Date(timestamp));
+                });
+                
+                // Add gap labels at appropriate positions
+                gapLabels.forEach(gapLabel => {
+                    xAxisData.push(gapLabel.x);
+                });
+                
+                // Sort the X-axis data chronologically
+                xAxisData.sort((a, b) => a - b);
+                
+                // Store the consolidated X-axis data for use in tick callbacks
+                this.consolidatedXAxis = xAxisData;
+                
                 // Update the chart with new data
                 this.chart.data.datasets = newDatasets;
-                this.chart.data.labels = visibleDates.map(date => new Date(date));
+                this.chart.data.labels = this.consolidatedXAxis;
                 
                 // Use a more stable update method
                 this.chart.update('none');
@@ -583,16 +600,20 @@
         }
         
         findGapLabel(date) {
-            // Find gap labels for the current visible date range
-            const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
-            const visibleDates = this.allDates.slice(this.startWeek, endWeek);
+            // Find gap labels from the consolidated X-axis data
+            if (!this.consolidatedXAxis) return null;
             
             for (const song of this.chartData.songs) {
-                const songData = this.createSongDataWithBreaks(song, visibleDates);
-                for (const item of songData) {
-                    if (item.isLabel && item.x && Math.abs(item.x - date) < (24 * 60 * 60 * 1000)) {
-                        return item;
+                // Check if this date corresponds to a gap label
+                const gapLabel = this.consolidatedXAxis.find(label => {
+                    if (label && label.isGap && label.x) {
+                        return Math.abs(label.x - date) < (24 * 60 * 60 * 1000);
                     }
+                    return false;
+                });
+                
+                if (gapLabel) {
+                    return gapLabel;
                 }
             }
             return null;
