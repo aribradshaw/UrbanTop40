@@ -63,11 +63,43 @@ class UrbanTop40_ArtistCharts {
         );
         */
         
-        // Enqueue our custom script (depends on Chart.js and jQuery)
+        // Enqueue all modular JavaScript files
+        wp_enqueue_script(
+            'chart-data-processor',
+            plugin_dir_url(__FILE__) . 'data-processor.js',
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+        
+        wp_enqueue_script(
+            'chart-scrollbar',
+            plugin_dir_url(__FILE__) . 'scrollbar.js',
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+        
+        wp_enqueue_script(
+            'chart-core',
+            plugin_dir_url(__FILE__) . 'chart-core.js',
+            array('jquery', 'chart-data-processor'),
+            '1.0.0',
+            true
+        );
+        
+        wp_enqueue_script(
+            'artist-charts-main',
+            plugin_dir_url(__FILE__) . 'artist-charts-main.js',
+            array('jquery', 'chart-data-processor', 'chart-scrollbar', 'chart-core'),
+            '1.0.0',
+            true
+        );
+        
         wp_enqueue_script(
             'artist-charts-js',
             plugin_dir_url(__FILE__) . 'artist-charts.js',
-            array('jquery', 'chartjs', 'chartjs-adapter-date-fns'),
+            array('jquery', 'chartjs', 'chartjs-adapter-date-fns', 'chart-data-processor', 'chart-scrollbar', 'chart-core', 'artist-charts-main'),
             '1.0.0',
             true
         );
