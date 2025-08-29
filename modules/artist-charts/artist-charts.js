@@ -28,19 +28,28 @@
         bindEvents() {
             console.log('Binding events for artist charts');
             
-            // Zoom controls
+            // Combined wheel event handler for zoom and horizontal scrolling
             this.container.on('wheel', '.chart-area', (e) => {
                 console.log('Wheel event detected');
                 e.preventDefault();
-                this.handleZoom(e);
+                
+                if (e.shiftKey) {
+                    // Shift + wheel = horizontal scrolling/panning
+                    console.log('Shift+wheel detected - horizontal scroll');
+                    this.handleHorizontalScroll(e);
+                } else {
+                    // Regular wheel = zoom
+                    console.log('Regular wheel detected - zoom');
+                    this.handleZoom(e);
+                }
             });
             
-            // Horizontal scrolling/panning
+            // Handle horizontal trackpad scrolling (deltaX)
             this.container.on('wheel', '.chart-area', (e) => {
-                if (e.shiftKey) {
-                    console.log('Shift+wheel detected');
+                if (Math.abs(e.originalEvent.deltaX) > Math.abs(e.originalEvent.deltaY)) {
+                    console.log('Horizontal trackpad scroll detected');
                     e.preventDefault();
-                    this.handleHorizontalScroll(e);
+                    this.handleTrackpadHorizontalScroll(e);
                 }
             });
             
@@ -380,6 +389,26 @@
             }
         }
         
+        handleTrackpadHorizontalScroll(e) {
+            console.log('Trackpad horizontal scroll event:', e.originalEvent.deltaX);
+            const delta = e.originalEvent.deltaX > 0 ? -1 : 1; // Invert for natural feel
+            const scrollAmount = Math.max(1, Math.floor(this.visibleWeeks / 8)); // Smaller increments for trackpad
+            
+            // Calculate new start week
+            let newStartWeek = this.startWeek + (delta * scrollAmount);
+            
+            // Clamp to valid range
+            const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
+            newStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
+            
+            if (newStartWeek !== this.startWeek) {
+                console.log(`Trackpad horizontal scroll: ${this.startWeek} -> ${newStartWeek}`);
+                this.startWeek = newStartWeek;
+                this.updateChartData();
+                this.updateScrollbarPosition();
+            }
+        }
+        
         addScrollbarAndIndicator() {
             const chartContainer = this.container.find('#chart-container');
             
@@ -424,27 +453,100 @@
             if (this.allDates.length <= this.visibleWeeks) return 0;
             const maxStartWeek = this.allDates.length - this.visibleWeeks;
             if (maxStartWeek <= 0) return 0;
-            return (this.startWeek / maxStartWeek) * 100;
+            
+            // Calculate position as a percentage of the scrollable area
+            const position = (this.startWeek / maxStartWeek) * 100;
+            
+            // Ensure the position is within bounds and accounts for thumb width
+            const thumbWidth = 60; // Width of scrollbar thumb in pixels
+            const trackWidth = this.container.find('.scrollbar-track').width() || 400; // Fallback width
+            const thumbWidthPercent = (thumbWidth / trackWidth) * 100;
+            
+            // Adjust position so thumb doesn't go beyond track boundaries
+            return Math.max(0, Math.min(100 - thumbWidthPercent, position));
         }
         
         makeScrollbarDraggable() {
             const scrollbar = this.container.find('.chart-scrollbar');
             const track = scrollbar.find('.scrollbar-track');
+            const thumb = scrollbar.find('.scrollbar-thumb');
             let isDragging = false;
+            let startX = 0;
+            let startLeft = 0;
             
-            track.on('mousedown', (e) => {
+            // Mouse events for desktop
+            thumb.on('mousedown', (e) => {
+                e.preventDefault();
                 isDragging = true;
-                this.handleScrollbarClick(e);
+                startX = e.clientX;
+                startLeft = parseFloat(thumb.css('left')) || 0;
+                
+                // Add grabbing cursor and dragging class
+                thumb.css('cursor', 'grabbing');
+                thumb.addClass('dragging');
+                
+                // Prevent text selection
+                document.body.style.userSelect = 'none';
             });
             
+            // Track click for jumping to position
+            track.on('mousedown', (e) => {
+                if (e.target === track[0]) {
+                    e.preventDefault();
+                    this.handleScrollbarClick(e);
+                }
+            });
+            
+            // Global mouse move and up events
             $(document).on('mousemove', (e) => {
                 if (isDragging) {
-                    this.handleScrollbarDrag(e);
+                    e.preventDefault();
+                    this.handleScrollbarDrag(e, startX, startLeft);
                 }
             });
             
             $(document).on('mouseup', () => {
-                isDragging = false;
+                if (isDragging) {
+                    isDragging = false;
+                    thumb.css('cursor', 'grab');
+                    thumb.removeClass('dragging');
+                    document.body.style.userSelect = '';
+                }
+            });
+            
+            // Touch events for mobile/trackpad
+            thumb.on('touchstart', (e) => {
+                e.preventDefault();
+                isDragging = true;
+                const touch = e.originalEvent.touches[0];
+                startX = touch.clientX;
+                startLeft = parseFloat(thumb.css('left')) || 0;
+                
+                // Add dragging class for visual feedback
+                thumb.addClass('dragging');
+            });
+            
+            track.on('touchstart', (e) => {
+                if (e.target === track[0]) {
+                    e.preventDefault();
+                    const touch = e.originalEvent.touches[0];
+                    this.handleScrollbarTouchClick(touch);
+                }
+            });
+            
+            $(document).on('touchmove', (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                    const touch = e.originalEvent.touches[0];
+                    this.handleScrollbarTouchDrag(touch, startX, startLeft);
+                }
+            });
+            
+            $(document).on('touchend', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    thumb.removeClass('dragging');
+                }
             });
         }
         
@@ -454,16 +556,52 @@
             const clickX = e.clientX - trackRect.left;
             const trackWidth = trackRect.width;
             
-            const percentage = (clickX / trackWidth) * 100;
+            // Calculate percentage and account for thumb width
+            const thumbWidth = 60;
+            const thumbWidthPercent = (thumbWidth / trackWidth) * 100;
+            let percentage = (clickX / trackWidth) * 100;
+            
+            // Adjust percentage so clicking positions the thumb center at click point
+            percentage = Math.max(thumbWidthPercent / 2, Math.min(100 - thumbWidthPercent / 2, percentage));
+            
+            console.log(`Scrollbar click: clickX=${clickX}, trackWidth=${trackWidth}, percentage=${percentage}`);
             this.setScrollbarPosition(percentage);
         }
         
-        handleScrollbarDrag(e) {
+        handleScrollbarDrag(e, startX, startLeft) {
             const track = this.container.find('.scrollbar-track');
             const trackRect = track[0].getBoundingClientRect();
             const dragX = e.clientX - trackRect.left;
             const trackWidth = trackRect.width;
             
+            const percentage = Math.max(0, Math.min(100, (dragX / trackWidth) * 100));
+            this.setScrollbarPosition(percentage);
+        }
+
+        handleScrollbarTouchClick(touch) {
+            const track = this.container.find('.scrollbar-track');
+            const trackRect = track[0].getBoundingClientRect();
+            const clickX = touch.clientX - trackRect.left;
+            const trackWidth = trackRect.width;
+
+            // Calculate percentage and account for thumb width
+            const thumbWidth = 60;
+            const thumbWidthPercent = (thumbWidth / trackWidth) * 100;
+            let percentage = (clickX / trackWidth) * 100;
+            
+            // Adjust percentage so touching positions the thumb center at touch point
+            percentage = Math.max(thumbWidthPercent / 2, Math.min(100 - thumbWidthPercent / 2, percentage));
+            
+            console.log(`Scrollbar touch click: clickX=${clickX}, trackWidth=${trackWidth}, percentage=${percentage}`);
+            this.setScrollbarPosition(percentage);
+        }
+
+        handleScrollbarTouchDrag(touch, startX, startLeft) {
+            const track = this.container.find('.scrollbar-track');
+            const trackRect = track[0].getBoundingClientRect();
+            const dragX = touch.clientX - trackRect.left;
+            const trackWidth = trackRect.width;
+
             const percentage = Math.max(0, Math.min(100, (dragX / trackWidth) * 100));
             this.setScrollbarPosition(percentage);
         }

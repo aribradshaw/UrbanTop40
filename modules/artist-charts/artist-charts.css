@@ -179,35 +179,82 @@
     padding: 0 10px;
     z-index: 5;
     width: 100%;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.chart-scrollbar:hover {
+    opacity: 1;
 }
 
 .scrollbar-track {
     position: relative;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: background 0.2s ease;
+}
+
+.scrollbar-track:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .scrollbar-thumb {
     position: absolute;
     top: 2px;
     width: 60px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
     cursor: grab;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
 }
 
 .scrollbar-thumb:active {
     cursor: grabbing;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
+}
+
+/* Scrollbar dragging state */
+.scrollbar-thumb.dragging {
+    background: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar track active state */
+.scrollbar-track:active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Ensure scrollbar is always visible and interactive */
+.chart-scrollbar {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Touch-friendly scrollbar sizing */
+@media (max-width: 768px) {
+    .scrollbar-track {
+        height: 28px;
+    }
+    
+    .scrollbar-thumb {
+        height: 24px;
+        width: 70px;
+    }
 }
 
 /* Song Legend */
