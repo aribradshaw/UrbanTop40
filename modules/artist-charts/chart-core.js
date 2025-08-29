@@ -83,13 +83,28 @@ class ChartCore {
                         borderWidth: 2,
                         callbacks: {
                             title: (tooltipItems) => {
-                                return `Week of ${tooltipItems[0].label}`;
+                                // Show the week date in a clean format
+                                const date = new Date(tooltipItems[0].label);
+                                return date.toLocaleDateString('en-US', { 
+                                    month: 'long', 
+                                    day: 'numeric', 
+                                    year: 'numeric' 
+                                });
                             },
                             label: (context) => {
                                 const songName = context.dataset.label;
                                 const position = context.parsed.y;
-                                return `${songName}: #${position}`;
+                                
+                                // Only show songs that have data for this week
+                                if (position !== null && !isNaN(position)) {
+                                    return `${songName}: #${position}`;
+                                }
+                                return null; // Don't show songs without data
                             }
+                        },
+                        filter: (tooltipItem) => {
+                            // Only show tooltips for songs with actual data
+                            return tooltipItem.parsed.y !== null && !isNaN(tooltipItem.parsed.y);
                         }
                     }
                 },
