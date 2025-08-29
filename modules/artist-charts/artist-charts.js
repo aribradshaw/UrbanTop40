@@ -225,7 +225,12 @@
                                     if (gapLabel) {
                                         return `${gapLabel.gapWeeks}w gap`;
                                     }
-                                    return Chart.defaults.time.time.displayFormats.week;
+                                    // Format the date manually if no gap label
+                                    return date.toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: '2-digit', 
+                                        year: 'numeric' 
+                                    });
                                 }
                             }
                         },
