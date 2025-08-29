@@ -229,9 +229,22 @@ class UrbanTop40_ArtistCharts {
         
         $artist = sanitize_text_field($_POST['artist']);
         
-        // Currently only support The Beatles
-        if (strtolower($artist) !== 'the beatles') {
-            wp_send_json_error('Artist not supported yet. Currently only "The Beatles" is available.');
+        // Normalize artist name for comparison
+        $normalized_artist = strtolower(trim($artist));
+        $supported_artists = array('the beatles', 'beatles', 'beatle');
+        
+        // Check if the artist is supported (currently only The Beatles)
+        $is_supported = false;
+        foreach ($supported_artists as $supported) {
+            if (strpos($normalized_artist, $supported) !== false) {
+                $is_supported = true;
+                $artist = 'The Beatles'; // Normalize to official name
+                break;
+            }
+        }
+        
+        if (!$is_supported) {
+            wp_send_json_error('Artist not supported yet. Currently only "The Beatles" is available. You requested: "' . $artist . '"');
         }
         
         // Get the Beatles data from the assets file
@@ -266,6 +279,8 @@ class UrbanTop40_ArtistCharts {
             $artist_data = json_decode($json_data, true);
             
             if ($artist_data) {
+                // Update the artist name in the data to match what was requested
+                $artist_data['artist'] = $artist;
                 error_log('Successfully parsed artist data with ' . count($artist_data['songs']) . ' songs');
                 wp_send_json_success($artist_data);
             } else {

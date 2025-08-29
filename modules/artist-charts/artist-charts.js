@@ -84,8 +84,9 @@
         $('.artist-charts-container').each(function() {
             console.log('Creating ArtistCharts instance');
             try {
-                new modules.ArtistCharts($(this));
-                console.log('✓ ArtistCharts instance created successfully');
+                const artist = $(this).data('artist') || 'the beatles';
+                new modules.ArtistCharts($(this), artist);
+                console.log('✓ ArtistCharts instance created successfully for artist:', artist);
             } catch (error) {
                 console.error('✗ Failed to create ArtistCharts instance:', error);
             }
