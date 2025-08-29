@@ -38,7 +38,11 @@ class ChartScrollbar {
         
         chartContainer.after(this.scrollbar);
         
-        // Position thumb at start
+        // Store references to elements
+        this.track = this.scrollbar.find('.scrollbar-track');
+        this.thumb = this.scrollbar.find('.scrollbar-thumb');
+        
+        // Initialize thumb size and position
         this.updateThumbPosition(0);
     }
     
@@ -101,8 +105,32 @@ class ChartScrollbar {
     }
     
     updateThumbPosition(percentage) {
-        const thumb = this.scrollbar.find('.scrollbar-thumb');
-        thumb.css('left', percentage + '%');
+        if (!this.thumb) return;
+        
+        // Calculate thumb size based on visible range vs total range
+        if (this.chartInstance && this.chartInstance.chartCore) {
+            const chartCore = this.chartInstance.chartCore;
+            const totalWeeks = chartCore.allDates.length;
+            const visibleWeeks = chartCore.visibleWeeks || 10;
+            
+            // Calculate thumb width as percentage of visible weeks vs total weeks
+            const thumbWidth = Math.max(10, (visibleWeeks / totalWeeks) * 100);
+            
+            // Ensure thumb doesn't get too small
+            const minThumbWidth = 20; // pixels
+            const trackWidth = this.track.width();
+            const thumbWidthPx = Math.max(minThumbWidth, (thumbWidth / 100) * trackWidth);
+            
+            // Update thumb size
+            this.thumb.css('width', thumbWidthPx + 'px');
+            
+            // Calculate thumb position
+            const maxPosition = trackWidth - thumbWidthPx;
+            const position = (percentage / 100) * maxPosition;
+            
+            // Update thumb position
+            this.thumb.css('left', position + 'px');
+        }
     }
     
     updateChartPosition(percentage) {

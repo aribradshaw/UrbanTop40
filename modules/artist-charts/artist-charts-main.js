@@ -117,11 +117,14 @@ class ArtistCharts {
         }
         
         try {
-            // Create chart core with all data (no filtering)
+            // Initialize the chart
             this.chartCore = new ChartCore(this.container, this.chartData);
             
             // Add scrollbar and week indicator
             this.addScrollbarAndIndicator();
+            
+            // Update week indicator with initial values
+            setTimeout(() => this.updateWeekIndicator(), 200);
         } catch (error) {
             console.error('Error creating chart:', error);
             this.showError('Failed to create chart: ' + error.message);
@@ -267,7 +270,7 @@ class ArtistCharts {
         chartContainer.after(zoomHint);
         
         // Update week indicator after chart is created
-        setTimeout(() => this.updateWeekIndicator(), 100);
+        // setTimeout(() => this.updateWeekIndicator(), 100); // This line is now handled in renderChart
     }
     
     updateWeekIndicator() {
