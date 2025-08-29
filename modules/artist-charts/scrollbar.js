@@ -1,6 +1,5 @@
 /**
- * Chart Scrollbar Module
- * 
+ * ChartScrollbar - Clean Rebuild
  * Simple, working scrollbar for chart navigation
  */
 
@@ -12,6 +11,8 @@ class ChartScrollbar {
         this.container = container;
         this.chartInstance = chartInstance;
         this.scrollbar = null;
+        this.track = null;
+        this.thumb = null;
         this.isDragging = false;
         this.startX = 0;
         this.startLeft = 0;
@@ -47,21 +48,18 @@ class ChartScrollbar {
     }
     
     bindEvents() {
-        const thumb = this.scrollbar.find('.scrollbar-thumb');
-        const track = this.scrollbar.find('.scrollbar-track');
-        
         // Mouse events
-        thumb.on('mousedown', (e) => this.startDrag(e));
+        this.thumb.on('mousedown', (e) => this.startDrag(e));
         $(document).on('mousemove', (e) => this.drag(e));
         $(document).on('mouseup', () => this.stopDrag());
         
         // Touch events
-        thumb.on('touchstart', (e) => this.startDrag(e));
+        this.thumb.on('touchstart', (e) => this.startDrag(e));
         $(document).on('touchmove', (e) => this.drag(e));
         $(document).on('touchend', () => this.stopDrag());
         
         // Click on track to jump
-        track.on('click', (e) => this.jumpToPosition(e));
+        this.track.on('click', (e) => this.jumpToPosition(e));
     }
     
     startDrag(e) {
@@ -71,8 +69,7 @@ class ChartScrollbar {
         const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
         this.startX = clientX;
         
-        const thumb = this.scrollbar.find('.scrollbar-thumb');
-        this.startLeft = parseInt(thumb.css('left')) || 0;
+        this.startLeft = parseInt(this.thumb.css('left')) || 0;
         
         this.container.addClass('dragging');
     }
@@ -95,8 +92,7 @@ class ChartScrollbar {
     }
     
     jumpToPosition(e) {
-        const track = $(e.currentTarget);
-        const trackRect = track[0].getBoundingClientRect();
+        const trackRect = this.track[0].getBoundingClientRect();
         const clickX = e.clientX - trackRect.left;
         const percentage = (clickX / trackRect.width) * 100;
         
@@ -134,7 +130,6 @@ class ChartScrollbar {
     }
     
     updateChartPosition(percentage) {
-        // Update chart position based on scrollbar position
         if (this.chartInstance && this.chartInstance.chartCore) {
             const chartCore = this.chartInstance.chartCore;
             const totalWeeks = chartCore.allDates.length;

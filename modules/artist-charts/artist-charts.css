@@ -4,19 +4,17 @@
  * Styling for the artist charts module
  */
 
-/* Artist Charts Module Styles */
-
+/* Artist Charts Module - Clean Rebuild */
 .artist-charts-container {
     background: linear-gradient(135deg, #E8BE3E 0%, #F0D070 50%, #E8BE3E 100%);
     border-radius: 12px;
-    padding: 30px;
+    padding: 20px;
     margin: 20px 0;
     box-shadow: 0 8px 32px rgba(232, 190, 62, 0.3);
     border: 2px solid rgba(232, 190, 62, 0.5);
     max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
-    position: relative;
 }
 
 .artist-charts-header {
@@ -26,71 +24,70 @@
 
 .artist-charts-title {
     font-size: 2.5em;
-    font-weight: 700;
+    font-weight: bold;
     color: #111111;
     margin: 0;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    text-transform: uppercase;
 }
 
 .artist-charts-subtitle {
     font-size: 1.2em;
-    color: #111111;
-    margin: 10px 0 0 0;
-    opacity: 0.8;
+    color: #E8BE3E;
+    margin: 10px 0;
 }
 
 .artist-charts-stats {
     display: flex;
     justify-content: center;
     gap: 20px;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 
 .stat-button {
     background: #111111;
     color: #E8BE3E;
     border: 2px solid #E8BE3E;
-    padding: 12px 24px;
+    padding: 10px 20px;
     border-radius: 25px;
-    font-weight: 600;
+    font-weight: bold;
     font-size: 1.1em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.stat-button:hover {
-    background: #E8BE3E;
-    color: #111111;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(232, 190, 62, 0.4);
-}
-
-/* Ensure the chart area has enough space for all elements */
+/* Chart Area - Clean and Simple */
 .chart-area {
     background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
     border-radius: 8px;
-    padding: 30px 60px 200px 60px;
+    padding: 20px;
     margin: 20px 0;
-    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(232, 190, 62, 0.3);
     width: 100%;
-    max-width: 100%;
     box-sizing: border-box;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
-    min-height: 800px;
 }
 
+/* Week Indicator */
+.week-indicator {
+    background: linear-gradient(135deg, #E8BE3E 0%, #F0D070 100%);
+    color: #111111;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 20px;
+    border: 1px solid rgba(232, 190, 62, 0.5);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Chart Container - Fixed Height and No Overflow */
 #chart-container {
     position: relative;
-    height: 800px;
-    margin: 20px 0;
+    height: 500px;
     width: 100%;
-    max-width: 100%;
-    overflow: visible;
-    padding-bottom: 200px;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 #artist-chart-canvas {
@@ -101,121 +98,67 @@
     box-sizing: border-box;
 }
 
-/* Week Indicator */
-.week-indicator {
-    background: linear-gradient(135deg, #E8BE3E 0%, #F0D070 100%);
-    padding: 12px 24px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    text-align: center;
-    font-size: 16px;
-    color: #111111;
-    font-weight: 600;
-    border: 2px solid rgba(111, 111, 111, 0.2);
-    box-shadow: 0 4px 12px rgba(232, 190, 62, 0.3);
-}
-
+/* Zoom Hint */
 .zoom-hint-subtle {
     position: absolute;
-    bottom: 50px;
+    bottom: 20px;
     right: 20px;
-    background: rgba(17, 17, 17, 0.8);
-    color: #E8BE3E;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-style: italic;
-    z-index: 5;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-    border: 1px solid rgba(232, 190, 62, 0.3);
-}
-
-.zoom-hint-subtle:hover {
-    opacity: 1;
     background: rgba(17, 17, 17, 0.9);
+    color: #E8BE3E;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid rgba(232, 190, 62, 0.3);
+    z-index: 10;
 }
 
 /* Chart Scrollbar */
 .chart-scrollbar {
-    margin-top: 15px;
-    padding: 0 10px;
+    margin-top: 20px;
+    padding: 0 20px;
 }
 
 .scrollbar-track {
-    background: rgba(17, 17, 17, 0.3);
+    background: #333;
     height: 8px;
     border-radius: 4px;
     position: relative;
     cursor: pointer;
-    border: 1px solid rgba(232, 190, 62, 0.3);
 }
 
 .scrollbar-thumb {
     background: linear-gradient(135deg, #E8BE3E 0%, #F0D070 100%);
     height: 100%;
     border-radius: 4px;
-    position: absolute;
-    width: 60px;
+    min-width: 20px;
     cursor: grab;
-    box-shadow: 0 2px 6px rgba(232, 190, 62, 0.4);
-    transition: all 0.2s ease;
-}
-
-.scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #F0D070 0%, #E8BE3E 100%);
-    box-shadow: 0 4px 12px rgba(232, 190, 62, 0.6);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .scrollbar-thumb:active {
     cursor: grabbing;
-    transform: scale(1.05);
 }
 
 /* Loading and Error States */
 .artist-charts-loading,
-.artist-songs-loading {
+.artist-charts-error {
     text-align: center;
     padding: 40px;
-    color: #111111;
-    font-size: 1.2em;
-}
-
-.artist-charts-error,
-.artist-songs-error {
-    background: linear-gradient(135deg, #FC5656 0%, #ff6b6b 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin: 20px 0;
-    text-align: center;
-    border: 2px solid rgba(252, 86, 86, 0.3);
-    box-shadow: 0 4px 12px rgba(252, 86, 86, 0.3);
-}
-
-.error-message {
-    margin-bottom: 15px;
-    font-weight: 600;
+    color: #E8BE3E;
 }
 
 .error-retry {
-    background: #111111;
-    color: #FC5656;
-    border: 2px solid #FC5656;
-    padding: 10px 20px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.error-retry:hover {
     background: #FC5656;
-    color: #111111;
-    transform: translateY(-1px);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+    font-weight: bold;
 }
 
-/* Song Legend */
+/* Songs Section */
 .artist-songs-content {
     background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
     border-radius: 8px;
@@ -224,6 +167,12 @@
     border: 1px solid rgba(232, 190, 62, 0.3);
     width: 100%;
     box-sizing: border-box;
+}
+
+.artist-songs-content h3 {
+    color: #E8BE3E;
+    margin: 0 0 20px 0;
+    font-size: 1.5em;
 }
 
 .song-legend {
@@ -240,166 +189,34 @@
     border-radius: 6px;
     border-left: 4px solid;
     transition: all 0.3s ease;
-}
-
-.song-legend-item:hover {
-    background: rgba(232, 190, 62, 0.15);
-    transform: translateX(5px);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .song-legend-name {
-    font-weight: 600;
     color: #E8BE3E;
+    font-weight: bold;
     margin-bottom: 8px;
     font-size: 1.1em;
 }
 
 .song-legend-details {
-    color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
     font-size: 0.9em;
-    margin-bottom: 4px;
+    line-height: 1.4;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .artist-charts-title {
-        font-size: 2em;
-    }
-    
-    .artist-charts-stats {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .stat-button {
-        width: 200px;
-    }
-    
     .song-legend {
         grid-template-columns: 1fr;
     }
     
-    #chart-container {
-        height: 300px;
-    }
-}
-
-@media (max-width: 480px) {
     .artist-charts-title {
-        font-size: 20px;
+        font-size: 2em;
     }
     
     .chart-area {
         padding: 15px;
-    }
-    
-    .song-legend {
-        padding: 15px;
-    }
-}
-
-/* Scrollbar Styling */
-.song-legend-scroll::-webkit-scrollbar {
-    width: 8px;
-}
-
-.song-legend-scroll::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-}
-
-.song-legend-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-.song-legend-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
-}
-
-/* Chart.js Customizations */
-.artist-charts-container canvas {
-    border-radius: 6px;
-}
-
-/* Animation for content appearance */
-.artist-charts-content {
-    animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Hover effects for interactive elements */
-.chart-control-button,
-.error-retry {
-    cursor: pointer;
-    user-select: none;
-}
-
-.chart-control-button:active,
-.error-retry:active {
-    transform: translateY(1px);
-}
-
-/* Focus states for accessibility */
-.chart-control-button:focus,
-.error-retry:focus {
-    outline: 2px solid rgba(255, 255, 255, 0.5);
-    outline-offset: 2px;
-}
-
-/* Artist Songs Container */
-.artist-songs-container {
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.artist-songs-loading {
-    text-align: center;
-    padding: 40px 20px;
-}
-
-.artist-songs-error {
-    text-align: center;
-    padding: 40px 20px;
-    background: rgba(244, 67, 54, 0.1);
-    border: 1px solid rgba(244, 67, 54, 0.3);
-    border-radius: 8px;
-    margin: 20px 0;
-}
-
-.artist-songs-content {
-    margin-top: 20px;
-}
-
-/* Ensure responsive behavior on desktop */
-@media (min-width: 768px) {
-    .artist-charts-container {
-        max-width: calc(100vw - 40px);
-        margin: 20px auto;
-    }
-    
-    .chart-area {
-        max-width: 100%;
-        overflow-x: auto;
-    }
-    
-    #chart-container {
-        max-width: 100%;
-        overflow-x: auto;
     }
 }

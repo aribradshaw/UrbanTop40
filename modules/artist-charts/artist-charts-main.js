@@ -1,82 +1,30 @@
 /**
- * Main Artist Charts Class
- * 
- * Simple, working chart implementation
+ * ArtistCharts - Clean Rebuild
+ * Main controller for the artist charts module
  */
 
 (function($) {
     'use strict';
-    
-    // Check for required dependencies
-    if (typeof $ === 'undefined') {
-        console.error('ArtistCharts: jQuery is not available');
-        return;
-    }
 
 class ArtistCharts {
-    constructor(container) {
+    constructor(container, artist) {
         this.container = container;
-        this.artist = container.data('artist');
+        this.artist = artist;
         this.chartData = null;
         this.chartCore = null;
         this.scrollbar = null;
+        this.weekIndicator = null;
         
         this.init();
     }
     
     init() {
+        this.showLoading();
         this.loadArtistData();
-        this.bindEvents();
-    }
-    
-    bindEvents() {
-        console.log('Binding events for artist charts');
-        
-        // Error retry
-        this.container.on('click', '.error-retry', () => {
-            this.loadArtistData();
-        });
-        
-        // Basic zoom and pan functionality
-        this.container.on('wheel', '.chart-area', (e) => {
-            e.preventDefault();
-            
-            if (e.shiftKey) {
-                // Shift + wheel = horizontal panning
-                this.handlePan(e);
-            } else if (Math.abs(e.originalEvent.deltaX) > Math.abs(e.originalEvent.deltaY)) {
-                // Horizontal scrolling (trackpad)
-                this.handleHorizontalScroll(e);
-            } else {
-                // Regular wheel = zoom
-                this.handleZoom(e);
-            }
-        });
-        
-        // Handle window resize to prevent Chart.js errors
-        $(window).on('resize', () => {
-            if (this.chartCore && this.chartCore.chart) {
-                this.chartCore.chart.resize();
-            }
-        });
     }
     
     async loadArtistData() {
-        this.showLoading();
-        this.hideError();
-        this.hideContent();
-        
         try {
-            // Check if jQuery is available
-            if (typeof $ === 'undefined') {
-                throw new Error('jQuery is not loaded. Please check your script dependencies.');
-            }
-            
-            // Check if AJAX data is available
-            if (typeof artistChartsAjax === 'undefined') {
-                throw new Error('AJAX configuration not loaded. Please refresh the page.');
-            }
-            
             console.log('ArtistCharts: Making AJAX request...');
             const response = await $.ajax({
                 url: artistChartsAjax.ajaxurl,
@@ -109,7 +57,6 @@ class ArtistCharts {
     renderChart() {
         if (!this.chartData) return;
         
-        // Check if required dependencies are available
         if (typeof ChartCore === 'undefined') {
             console.error('ArtistCharts: ChartCore class not available');
             this.showError('Chart dependencies not loaded. Please refresh the page.');
@@ -117,11 +64,9 @@ class ArtistCharts {
         }
         
         try {
-            // Initialize the chart
             this.chartCore = new ChartCore(this.container, this.chartData);
-            
-            // Add scrollbar and week indicator
             this.addScrollbarAndIndicator();
+            this.bindEvents();
             
             // Update week indicator with initial values
             setTimeout(() => this.updateWeekIndicator(), 200);
@@ -131,13 +76,25 @@ class ArtistCharts {
         }
     }
     
+    bindEvents() {
+        // Basic zoom and pan functionality
+        this.container.on('wheel', '.chart-area', (e) => {
+            e.preventDefault();
+            if (e.shiftKey) {
+                this.handlePan(e);
+            } else if (Math.abs(e.originalEvent.deltaX) > Math.abs(e.originalEvent.deltaY)) {
+                this.handleHorizontalScroll(e);
+            } else {
+                this.handleZoom(e);
+            }
+        });
+    }
+    
     handleZoom(e) {
         if (!this.chartCore || !this.chartCore.chart) return;
         
         const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
         const chart = this.chartCore.chart;
-        
-        // Get current scale range
         const currentMin = chart.options.scales.x.min;
         const currentMax = chart.options.scales.x.max;
         
@@ -146,19 +103,15 @@ class ArtistCharts {
             const center = new Date((currentMin.getTime() + currentMax.getTime()) / 2);
             const newRange = range * delta;
             
-            // Calculate new min and max dates
             let newMin = new Date(center.getTime() - (newRange / 2));
             let newMax = new Date(center.getTime() + (newRange / 2));
             
-            // Constrain to data boundaries
             const constrained = this.chartCore.constrainZoom(newMin, newMax);
             
-            // Update chart scale
             chart.options.scales.x.min = constrained.min;
             chart.options.scales.x.max = constrained.max;
             chart.update('none');
             
-            // Update week indicator
             this.updateWeekIndicator();
         }
     }
@@ -168,8 +121,6 @@ class ArtistCharts {
         
         const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
         const chart = this.chartCore.chart;
-        
-        // Get current scale range
         const currentMin = chart.options.scales.x.min;
         const currentMax = chart.options.scales.x.max;
         
@@ -177,31 +128,24 @@ class ArtistCharts {
             const range = currentMax - currentMin;
             const shift = range * 0.1 * delta;
             
-            // Calculate new min and max dates
             let newMin = new Date(currentMin.getTime() + shift);
             let newMax = new Date(currentMax.getTime() + shift);
             
-            // Constrain to data boundaries
             const constrained = this.chartCore.constrainPan(newMin, newMax);
             
-            // Update chart scale
             chart.options.scales.x.min = constrained.min;
             chart.options.scales.x.max = constrained.max;
             chart.update('none');
             
-            // Update week indicator
             this.updateWeekIndicator();
         }
     }
     
-    // Handle horizontal scrolling (trackpad or mouse wheel with shift)
     handleHorizontalScroll(e) {
         if (!this.chartCore || !this.chartCore.chart) return;
         
         const delta = e.originalEvent.deltaX || e.originalEvent.deltaY;
         const chart = this.chartCore.chart;
-        
-        // Get current scale range
         const currentMin = chart.options.scales.x.min;
         const currentMax = chart.options.scales.x.max;
         
@@ -209,68 +153,17 @@ class ArtistCharts {
             const range = currentMax - currentMin;
             const shift = range * 0.1 * (delta > 0 ? 1 : -1);
             
-            // Calculate new min and max dates
             let newMin = new Date(currentMin.getTime() + shift);
             let newMax = new Date(currentMax.getTime() + shift);
             
-            // Constrain to data boundaries
             const constrained = this.chartCore.constrainPan(newMin, newMax);
             
-            // Update chart scale
             chart.options.scales.x.min = constrained.min;
             chart.options.scales.x.max = constrained.max;
             chart.update('none');
             
-            // Update week indicator
             this.updateWeekIndicator();
         }
-    }
-    
-    updateStats() {
-        if (!this.chartData) return;
-        
-        this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
-        
-        // Calculate number of #1 hits
-        let numberOnes = 0;
-        this.chartData.songs.forEach(song => {
-            const peakPosition = Math.min(...song.chartHistory.map(e => e.position));
-            if (peakPosition === 1) {
-                numberOnes++;
-            }
-        });
-        
-        this.container.find('#week-count').text(`${numberOnes} Number Ones`);
-    }
-    
-    addScrollbarAndIndicator() {
-        const chartContainer = this.container.find('#chart-container');
-        
-        // Add week indicator above chart
-        this.weekIndicator = $(`
-            <div class="week-indicator">
-                <span class="week-range">Loading...</span>
-            </div>
-        `);
-        chartContainer.before(this.weekIndicator);
-        
-        // Initialize scrollbar if available
-        if (typeof ChartScrollbar !== 'undefined') {
-            this.scrollbar = new ChartScrollbar(this.container, this);
-        } else {
-            console.warn('ArtistCharts: ChartScrollbar class not available, scrollbar disabled');
-        }
-        
-        // Add simple zoom hint
-        const zoomHint = $(`
-            <div class="zoom-hint-subtle">
-                Scroll to zoom • Shift+Scroll to pan
-            </div>
-        `);
-        chartContainer.after(zoomHint);
-        
-        // Update week indicator after chart is created
-        // setTimeout(() => this.updateWeekIndicator(), 100); // This line is now handled in renderChart
     }
     
     updateWeekIndicator() {
@@ -282,14 +175,12 @@ class ArtistCharts {
         
         if (currentMin && currentMax && this.chartCore.allDates && this.chartCore.allDates.length > 0) {
             try {
-                // Get the actual data boundaries
                 const firstDataDate = new Date(this.chartCore.allDates[0]);
                 const lastDataDate = new Date(this.chartCore.allDates[this.chartCore.allDates.length - 1]);
                 
                 // Ensure we're not showing dates beyond the data range
                 if (currentMin < firstDataDate || currentMax > lastDataDate) {
                     console.warn('Chart view is outside data boundaries, resetting...');
-                    // Reset chart to valid range
                     chart.options.scales.x.min = firstDataDate;
                     chart.options.scales.x.max = new Date(firstDataDate.getTime() + (this.chartCore.visibleWeeks * 7 * 24 * 60 * 60 * 1000));
                     chart.update('none');
@@ -315,21 +206,23 @@ class ArtistCharts {
                         this.updateScrollbarPosition(startWeek, this.chartCore.allDates.length);
                     }
                 } else {
-                    // Fallback: show current visible weeks based on startWeek
-                    const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
-                    this.weekIndicator.find('.week-range').text(weekText);
+                    // Fallback: calculate weeks based on date differences
+                    const startDiff = Math.floor((currentMin - firstDataDate) / (7 * 24 * 60 * 60 * 1000));
+                    const endDiff = Math.floor((currentMax - firstDataDate) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    if (startDiff >= 0 && endDiff >= startDiff) {
+                        const weekText = `Weeks ${startDiff + 1}-${endDiff + 1} of ${this.chartCore.allDates.length}`;
+                        this.weekIndicator.find('.week-range').text(weekText);
+                    }
                 }
             } catch (error) {
                 console.error('Error updating week indicator:', error);
-                // Fallback to basic week display
-                const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
-                this.weekIndicator.find('.week-range').text(weekText);
             }
         }
     }
     
     updateScrollbarPosition(startWeek, totalWeeks) {
-        if (!this.scrollbar || !this.chartCore) return;
+        if (!this.scrollbar) return;
         
         const visibleWeeks = this.chartCore.visibleWeeks;
         const maxStartWeek = Math.max(0, totalWeeks - visibleWeeks);
@@ -340,46 +233,106 @@ class ArtistCharts {
         }
     }
     
+    addScrollbarAndIndicator() {
+        const chartContainer = this.container.find('#chart-container');
+        
+        // Add week indicator above chart
+        this.weekIndicator = $(`
+            <div class="week-indicator">
+                <span class="week-range">Loading...</span>
+            </div>
+        `);
+        chartContainer.before(this.weekIndicator);
+        
+        // Initialize scrollbar if available
+        if (typeof ChartScrollbar !== 'undefined') {
+            this.scrollbar = new ChartScrollbar(this.container, this);
+        } else {
+            console.warn('ArtistCharts: ChartScrollbar class not available, scrollbar disabled');
+        }
+        
+        // Add zoom hint
+        const zoomHint = $(`
+            <div class="zoom-hint-subtle">
+                Scroll to zoom • Shift+Scroll to pan
+            </div>
+        `);
+        chartContainer.after(zoomHint);
+    }
+    
+    updateStats() {
+        if (!this.chartData) return;
+        
+        this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
+        
+        let numberOnes = 0;
+        this.chartData.songs.forEach(song => {
+            const peakPosition = Math.min(...song.chartHistory.map(e => e.position));
+            if (peakPosition === 1) {
+                numberOnes++;
+            }
+        });
+        
+        this.container.find('#week-count').text(`${numberOnes} Number Ones`);
+    }
+    
     showLoading() {
-        this.container.find('.artist-charts-loading').show();
+        this.container.html(`
+            <div class="artist-charts-loading">
+                Loading chart data...
+            </div>
+        `);
     }
     
     hideLoading() {
-        this.container.find('.artist-charts-loading').hide();
+        this.container.find('.artist-charts-loading').remove();
     }
     
     showContent() {
-        this.container.find('.artist-charts-content').show();
+        this.container.html(`
+            <div class="artist-charts-header">
+                <h1 class="artist-charts-title">${this.artist.toUpperCase()}</h1>
+                <p class="artist-charts-subtitle">Billboard Hot 100 Chart History</p>
+                <div class="artist-charts-stats">
+                    <div class="stat-button" id="song-count"></div>
+                    <div class="stat-button" id="week-count"></div>
+                </div>
+            </div>
+            <div class="chart-area">
+                <div id="chart-container"></div>
+            </div>
+            <div class="artist-songs-content">
+                <h3>Songs</h3>
+                <div class="song-legend">
+                    ${this.chartData.songs.map((song, index) => `
+                        <div class="song-legend-item" style="border-left-color: ${this.getSongColor(index)};">
+                            <div class="song-legend-name">${song.song}</div>
+                            <div class="song-legend-details">
+                                Peak Rank: #${Math.min(...song.chartHistory.map(e => e.position))}<br>
+                                Weeks On Chart: ${song.chartHistory.length}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `);
     }
     
-    hideContent() {
-        this.container.find('.artist-charts-content').hide();
+    getSongColor(index) {
+        const colors = [
+            '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+            '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+        ];
+        return colors[index % colors.length];
     }
     
     showError(message) {
-        this.container.find('.error-message').text(message);
-        this.container.find('.artist-charts-error').show();
-    }
-    
-    hideError() {
-        this.container.find('.artist-charts-error').hide();
-    }
-    
-    // Cleanup method to prevent memory leaks
-    destroy() {
-        if (this.chartCore) {
-            this.chartCore.destroy();
-            this.chartCore = null;
-        }
-        
-        if (this.scrollbar) {
-            this.scrollbar.destroy();
-            this.scrollbar = null;
-        }
-        
-        // Remove event listeners
-        this.container.off();
-        $(window).off('resize');
+        this.container.html(`
+            <div class="artist-charts-error">
+                <p>Error: ${message}</p>
+                <button class="error-retry" onclick="location.reload()">Retry</button>
+            </div>
+        `);
     }
 }
 
