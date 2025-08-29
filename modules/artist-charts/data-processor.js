@@ -62,7 +62,15 @@ class ChartDataProcessor {
         });
         
         // Sort the X-axis data chronologically
-        xAxisData.sort((a, b) => a - b);
+        xAxisData.sort((a, b) => {
+            if (a instanceof Date && b instanceof Date) {
+                return a - b;
+            }
+            // Handle gap labels - they should be sorted by their date property
+            const dateA = a instanceof Date ? a : a.x;
+            const dateB = b instanceof Date ? b : b.x;
+            return dateA - dateB;
+        });
         
         return { datasets, xAxis: xAxisData };
     }
@@ -126,7 +134,7 @@ class ChartDataProcessor {
             });
         });
         
-        // Find significant gaps and condense them - be more aggressive
+        // Find significant gaps and condense them - be VERY aggressive
         const condensedDates = [];
         let lastDataDate = null;
         let gapStartDate = null;
@@ -137,8 +145,8 @@ class ChartDataProcessor {
             
             if (dataDates.has(currentDate)) {
                 // This date has chart data
-                if (gapStartDate && gapWeeks > 1) {
-                    // Add a single gap label for the entire gap period
+                if (gapStartDate && gapWeeks > 0) {
+                    // Add a single gap label for ANY gap period (even 1 week)
                     condensedDates.push({
                         date: gapStartDate,
                         isGap: true,
@@ -151,7 +159,7 @@ class ChartDataProcessor {
                 condensedDates.push(currentDate);
                 lastDataDate = currentDate;
             } else {
-                // This is a blank week
+                // This is a blank week - count it
                 if (!gapStartDate) {
                     gapStartDate = currentDate;
                     gapWeeks = 1;
@@ -162,7 +170,7 @@ class ChartDataProcessor {
         }
         
         // Handle any remaining gap at the end
-        if (gapStartDate && gapWeeks > 1) {
+        if (gapStartDate && gapWeeks > 0) {
             condensedDates.push({
                 date: gapStartDate,
                 isGap: true,

@@ -88,13 +88,7 @@ class ChartCore {
                 },
                 scales: {
                     x: {
-                        type: 'time',
-                        time: {
-                            unit: 'week',
-                            displayFormats: {
-                                week: 'MMM dd, yyyy'
-                            }
-                        },
+                        type: 'category',
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)'
                         },
@@ -103,17 +97,19 @@ class ChartCore {
                             maxRotation: 45,
                             callback: (value, index, ticks) => {
                                 // Check if this tick corresponds to a gap label
-                                const date = new Date(value);
-                                const gapLabel = this.findGapLabel(date);
-                                if (gapLabel) {
-                                    return `${gapLabel.gapWeeks}w gap`;
+                                const label = this.consolidatedXAxis[index];
+                                if (label && label.isGap) {
+                                    return `${label.gapWeeks}w gap`;
                                 }
                                 // Format the date manually if no gap label
-                                return date.toLocaleDateString('en-US', { 
-                                    month: 'short', 
-                                    day: '2-digit', 
-                                    year: 'numeric' 
-                                });
+                                if (label instanceof Date) {
+                                    return label.toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: '2-digit', 
+                                        year: 'numeric' 
+                                    });
+                                }
+                                return value;
                             }
                         }
                     },
@@ -179,8 +175,16 @@ class ChartCore {
         // Process the condensed data
         const processedData = ChartDataProcessor.processChartData(this.chartData, condensedDates);
         
-        // Store the consolidated X-axis data
-        this.consolidatedXAxis = processedData.xAxis;
+        // Store the consolidated X-axis data and convert to proper format
+        this.consolidatedXAxis = processedData.xAxis.map(item => {
+            if (item && item.isGap) {
+                return item; // Keep gap objects as-is
+            } else if (item instanceof Date) {
+                return item; // Keep dates as-is
+            } else {
+                return new Date(item); // Convert string dates to Date objects
+            }
+        });
         
         return { datasets: processedData.datasets };
     }
