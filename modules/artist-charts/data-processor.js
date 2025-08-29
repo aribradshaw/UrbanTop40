@@ -168,6 +168,9 @@ class ChartDataProcessor {
     }
 }
 
+// Make ChartDataProcessor available globally
+window.ChartDataProcessor = ChartDataProcessor;
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ChartDataProcessor;

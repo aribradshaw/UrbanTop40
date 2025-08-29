@@ -4,6 +4,10 @@
  * Handles the main Chart.js rendering and data management
  */
 
+// Wrap in function to ensure jQuery is available
+(function($) {
+    'use strict';
+
 class ChartCore {
     constructor(container, chartData, options = {}) {
         this.container = container;
@@ -211,7 +215,12 @@ class ChartCore {
     }
 }
 
+// Make ChartCore available globally
+window.ChartCore = ChartCore;
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ChartCore;
 }
+
+})(jQuery);

@@ -4,6 +4,10 @@
  * Handles all scrollbar functionality for the artist charts
  */
 
+// Wrap in function to ensure jQuery is available
+(function($) {
+    'use strict';
+
 class ChartScrollbar {
     constructor(container, chartInstance) {
         this.container = container;
@@ -169,7 +173,12 @@ class ChartScrollbar {
     }
 }
 
+// Make ChartScrollbar available globally
+window.ChartScrollbar = ChartScrollbar;
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ChartScrollbar;
 }
+
+})(jQuery);
