@@ -124,6 +124,9 @@ class ChartCore {
                             unit: 'week',
                             displayFormats: {
                                 week: 'MMM d, yyyy'
+                            },
+                            parser: {
+                                format: 'yyyy-MM-dd'
                             }
                         },
                         grid: {
@@ -131,7 +134,19 @@ class ChartCore {
                         },
                         ticks: {
                             color: '#E8BE3E',
-                            maxRotation: 45
+                            maxRotation: 45,
+                            minRotation: 45,
+                            callback: function(value, index, values) {
+                                const date = new Date(value);
+                                if (isNaN(date.getTime())) {
+                                    return '';
+                                }
+                                return date.toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    year: 'numeric' 
+                                });
+                            }
                         },
                         min: startDate,
                         max: endDate
@@ -207,8 +222,20 @@ class ChartCore {
         const sortedHistory = song.chartHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
         
         sortedHistory.forEach((entry, index) => {
+            // Ensure we have a valid date
             const currentDate = new Date(entry.date);
+            if (isNaN(currentDate.getTime())) {
+                console.warn('Invalid date found:', entry.date, 'for song:', song.song);
+                return; // Skip this entry
+            }
+            
             const currentPosition = entry.position;
+            
+            // Validate position
+            if (isNaN(currentPosition) || currentPosition < 1 || currentPosition > 100) {
+                console.warn('Invalid position found:', currentPosition, 'for song:', song.song, 'on date:', entry.date);
+                return; // Skip this entry
+            }
             
             // Check if this is a re-entry after falling off chart OR if there's a large time gap
             if (lastPosition !== null && lastDate !== null) {
