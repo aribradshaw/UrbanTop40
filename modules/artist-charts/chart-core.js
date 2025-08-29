@@ -118,18 +118,11 @@ class ChartCore {
                 },
                 elements: {
                     point: {
-                        radius: (context) => {
-                            const point = context.raw;
-                            return point && point.skip ? 0 : 3; // Hide gap points
-                        },
-                        hoverRadius: (context) => {
-                            const point = context.raw;
-                            return point && point.skip ? 0 : 5; // Hide gap points on hover
-                        }
+                        radius: 3,
+                        hoverRadius: 5
                     },
                     line: {
-                        tension: 0.1,
-                        spanGaps: true // Connect lines but skip gap points
+                        tension: 0.1
                     }
                 },
                 parsing: {
@@ -143,7 +136,7 @@ class ChartCore {
     prepareChartData() {
         if (!this.chartData || !this.chartData.songs) return { datasets: [] };
         
-        // Get all unique dates and sort them
+        // SIMPLE APPROACH: Get ALL dates with chart data, no filtering
         const allDates = new Set();
         this.chartData.songs.forEach(song => {
             song.chartHistory.forEach(entry => {
@@ -153,43 +146,19 @@ class ChartCore {
         
         const sortedDates = Array.from(allDates).sort();
         
-        // Get the visible date range based on startWeek and visibleWeeks
-        const startWeek = this.options.startWeek || 0;
-        const visibleWeeks = this.options.visibleWeeks || sortedDates.length;
-        const endWeek = Math.min(startWeek + visibleWeeks, sortedDates.length);
-        const visibleDates = sortedDates.slice(startWeek, endWeek);
+        // Use ALL dates, not just a subset
+        const visibleDates = sortedDates;
         
-        // Condense the visible dates to eliminate blank weeks
-        const condensedDates = ChartDataProcessor.condenseVisibleDates(visibleDates, this.chartData);
+        // Process the data with all dates
+        const processedData = ChartDataProcessor.processChartData(this.chartData, visibleDates);
         
-        // Process the condensed data
-        const processedData = ChartDataProcessor.processChartData(this.chartData, condensedDates);
-        
-        // Store the consolidated X-axis data and convert to proper format
-        this.consolidatedXAxis = processedData.xAxis.map(item => {
-            if (item && item.isGap) {
-                return item; // Keep gap objects as-is
-            } else if (item instanceof Date) {
-                return item; // Keep dates as-is
-            } else {
-                return new Date(item); // Convert string dates to Date objects
-            }
-        });
+        // Store the consolidated X-axis data
+        this.consolidatedXAxis = processedData.xAxis;
         
         return { datasets: processedData.datasets };
     }
     
-    findGapLabel(date) {
-        // Find gap labels from the consolidated X-axis data
-        if (!this.consolidatedXAxis) return null;
-        
-        return this.consolidatedXAxis.find(label => {
-            if (label && label.isGap && label.x) {
-                return Math.abs(label.x - date) < (24 * 60 * 60 * 1000);
-            }
-            return false;
-        });
-    }
+
     
     updateChartData(newOptions = {}) {
         if (!this.chart) return;
