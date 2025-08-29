@@ -74,14 +74,8 @@ class ChartCore {
                             },
                             label: (context) => {
                                 const songName = context.dataset.label;
-                                const point = context.raw;
-                                
-                                if (point && point.isGap) {
-                                    return `${songName}: ${point.gapWeeks} week gap`;
-                                } else {
-                                    const position = context.parsed.y;
-                                    return `${songName}: #${position}`;
-                                }
+                                const position = context.parsed.y;
+                                return `${songName}: #${position}`;
                             }
                         }
                     }
@@ -96,12 +90,8 @@ class ChartCore {
                             color: 'rgba(255, 255, 255, 0.7)',
                             maxRotation: 45,
                             callback: (value, index, ticks) => {
-                                // Check if this tick corresponds to a gap label
+                                // Simple date formatting
                                 const label = this.consolidatedXAxis[index];
-                                if (label && label.isGap) {
-                                    return `${label.gapWeeks}w gap`;
-                                }
-                                // Format the date manually if no gap label
                                 if (label instanceof Date) {
                                     return label.toLocaleDateString('en-US', { 
                                         month: 'short', 
