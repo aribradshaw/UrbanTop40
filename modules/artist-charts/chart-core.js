@@ -8,16 +8,25 @@
     'use strict';
 
 class ChartCore {
-    constructor(container, chartData, options = {}) {
+    constructor(container, chartData) {
         this.container = container;
         this.chartData = chartData;
-        this.options = options;
         this.chart = null;
-        this.allDates = [];
-        this.visibleWeeks = options.visibleWeeks || 10;
-        this.startWeek = options.startWeek || 0;
         
-        this.init();
+        // Get all unique dates and sort them
+        this.allDates = new Set();
+        this.chartData.songs.forEach(song => {
+            song.chartHistory.forEach(entry => {
+                this.allDates.add(entry.date);
+            });
+        });
+        this.allDates = Array.from(this.allDates).sort();
+        
+        // Calculate initial visible range - start with first 10 weeks
+        this.visibleWeeks = 10;
+        this.startWeek = 0;
+        
+        this.renderChart();
     }
     
     init() {
@@ -152,6 +161,9 @@ class ChartCore {
                 }
             }
         });
+        
+        // Ensure the chart respects data boundaries
+        this.enforceBoundaries();
     }
     
     prepareChartData() {
@@ -288,6 +300,23 @@ class ChartCore {
             this.chart.options.scales.x.min = startDate;
             this.chart.options.scales.x.max = endDate;
             this.chart.update('none');
+        }
+    }
+    
+    // Ensure chart always respects data boundaries
+    enforceBoundaries() {
+        if (!this.chart) return;
+        
+        const currentMin = this.chart.options.scales.x.min;
+        const currentMax = this.chart.options.scales.x.max;
+        
+        if (currentMin && currentMax) {
+            const constrained = this.constrainPan(currentMin, currentMax);
+            if (constrained.min !== currentMin || constrained.max !== currentMax) {
+                this.chart.options.scales.x.min = constrained.min;
+                this.chart.options.scales.x.max = constrained.max;
+                this.chart.update('none');
+            }
         }
     }
     
