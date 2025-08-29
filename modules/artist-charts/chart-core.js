@@ -92,8 +92,25 @@ class ChartCore {
                         borderWidth: 2,
                         callbacks: {
                             title: (tooltipItems) => {
-                                // Show the week date in a clean format
-                                const date = new Date(tooltipItems[0].label);
+                                // Get the date from the tooltip item
+                                const tooltipItem = tooltipItems[0];
+                                let date;
+                                
+                                // Try to get date from different possible sources
+                                if (tooltipItem.parsed && tooltipItem.parsed.x) {
+                                    date = new Date(tooltipItem.parsed.x);
+                                } else if (tooltipItem.label) {
+                                    date = new Date(tooltipItem.label);
+                                } else if (tooltipItem.raw && tooltipItem.raw.x) {
+                                    date = new Date(tooltipItem.raw.x);
+                                }
+                                
+                                // Validate the date
+                                if (!date || isNaN(date.getTime())) {
+                                    console.warn('Invalid date in tooltip:', tooltipItem);
+                                    return 'Date unavailable';
+                                }
+                                
                                 return date.toLocaleDateString('en-US', { 
                                     month: 'long', 
                                     day: 'numeric', 
@@ -105,7 +122,7 @@ class ChartCore {
                                 const position = context.parsed.y;
                                 
                                 // Only show songs that have data for this week
-                                if (position !== null && !isNaN(position)) {
+                                if (position !== null && !isNaN(position) && position > 0 && position <= 100) {
                                     return `${songName}: #${position}`;
                                 }
                                 return null; // Don't show songs without data
@@ -113,7 +130,7 @@ class ChartCore {
                         },
                         filter: (tooltipItem) => {
                             // Only show tooltips for songs with actual data
-                            return tooltipItem.parsed.y !== null && !isNaN(tooltipItem.parsed.y);
+                            return tooltipItem.parsed.y !== null && !isNaN(tooltipItem.parsed.y) && tooltipItem.parsed.y > 0 && tooltipItem.parsed.y <= 100;
                         }
                     }
                 },

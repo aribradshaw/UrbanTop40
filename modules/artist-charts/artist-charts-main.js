@@ -280,21 +280,49 @@ class ArtistCharts {
         const currentMin = chart.options.scales.x.min;
         const currentMax = chart.options.scales.x.max;
         
-        if (currentMin && currentMax) {
-            const totalWeeks = this.chartCore.allDates.length;
-            const startWeek = this.chartCore.allDates.findIndex(date => 
-                Math.abs(new Date(date) - currentMin) < (24 * 60 * 60 * 1000)
-            );
-            const endWeek = this.chartCore.allDates.findIndex(date => 
-                Math.abs(new Date(date) - currentMax) < (24 * 60 * 60 * 1000)
-            );
-            
-            const weekText = `Weeks ${startWeek + 1}-${endWeek + 1} of ${totalWeeks}`;
-            this.weekIndicator.find('.week-range').text(weekText);
-            
-            // Update scrollbar position if available
-            if (this.scrollbar) {
-                this.updateScrollbarPosition(startWeek, totalWeeks);
+        if (currentMin && currentMax && this.chartCore.allDates && this.chartCore.allDates.length > 0) {
+            try {
+                // Find the closest dates in allDates to the current view
+                const firstDate = new Date(this.chartCore.allDates[0]);
+                const lastDate = new Date(this.chartCore.allDates[this.chartCore.allDates.length - 1]);
+                
+                // Calculate which weeks these represent
+                const startWeek = this.chartCore.allDates.findIndex(date => {
+                    const dateObj = new Date(date);
+                    return Math.abs(dateObj.getTime() - currentMin.getTime()) < (24 * 60 * 60 * 1000);
+                });
+                
+                const endWeek = this.chartCore.allDates.findIndex(date => {
+                    const dateObj = new Date(date);
+                    return Math.abs(dateObj.getTime() - currentMax.getTime()) < (24 * 60 * 60 * 1000);
+                });
+                
+                if (startWeek !== -1 && endWeek !== -1) {
+                    const weekText = `Weeks ${startWeek + 1}-${endWeek + 1} of ${this.chartCore.allDates.length}`;
+                    this.weekIndicator.find('.week-range').text(weekText);
+                    
+                    if (this.scrollbar) {
+                        this.updateScrollbarPosition(startWeek, this.chartCore.allDates.length);
+                    }
+                } else {
+                    // Fallback: calculate weeks based on date differences
+                    const startDiff = Math.floor((currentMin - firstDate) / (7 * 24 * 60 * 60 * 1000));
+                    const endDiff = Math.floor((currentMax - firstDate) / (7 * 24 * 60 * 60 * 1000));
+                    
+                    if (startDiff >= 0 && endDiff >= startDiff) {
+                        const weekText = `Weeks ${startDiff + 1}-${endDiff + 1} of ${this.chartCore.allDates.length}`;
+                        this.weekIndicator.find('.week-range').text(weekText);
+                    } else {
+                        // Last resort: show current visible weeks
+                        const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
+                        this.weekIndicator.find('.week-range').text(weekText);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating week indicator:', error);
+                // Fallback to basic week display
+                const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
+                this.weekIndicator.find('.week-range').text(weekText);
             }
         }
     }
