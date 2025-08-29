@@ -328,6 +328,7 @@
             const data = [];
             let lastEntry = null;
             let currentDataset = [];
+            let gapAdded = false; // Track if we've already added a gap for this period
             
             for (let i = 0; i < visibleDates.length; i++) {
                 const currentDate = visibleDates[i];
@@ -340,7 +341,8 @@
                         y: entry.position
                     });
                     lastEntry = entry;
-                } else if (lastEntry) {
+                    gapAdded = false; // Reset gap flag when we find an entry
+                } else if (lastEntry && !gapAdded) {
                     // Check if this is a significant gap (more than 2 weeks)
                     const lastDate = new Date(lastEntry.date);
                     const currentDateObj = new Date(currentDate);
@@ -353,7 +355,7 @@
                             currentDataset = [];
                         }
                         
-                        // Add a gap label point for the X-axis
+                        // Add a gap label point for the X-axis (only once per gap period)
                         data.push({
                             x: new Date(currentDate),
                             y: null,
@@ -363,6 +365,7 @@
                         });
                         
                         lastEntry = null; // Reset to start fresh line
+                        gapAdded = true; // Mark that we've added a gap for this period
                     }
                 }
             }
@@ -380,9 +383,16 @@
             
             this.container.find('#song-count').text(`${this.chartData.totalSongs} Songs`);
             
-            // Calculate total weeks
-            const totalWeeks = this.allDates.length;
-            this.container.find('#week-count').text(`${totalWeeks} Weeks`);
+            // Calculate number of #1 hits
+            let numberOnes = 0;
+            this.chartData.songs.forEach(song => {
+                const peakPosition = Math.min(...song.chartHistory.map(e => e.position));
+                if (peakPosition === 1) {
+                    numberOnes++;
+                }
+            });
+            
+            this.container.find('#week-count').text(`${numberOnes} Number Ones`);
         }
         
         handleZoom(e) {
