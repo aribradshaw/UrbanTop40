@@ -117,20 +117,27 @@
             }
         });
         
-        // Try to initialize artist charts if modules are available
-        if (typeof ArtistCharts !== 'undefined') {
-            $('.artist-charts-container').each(function() {
-                console.log('Creating ArtistCharts instance');
-                try {
-                    new ArtistCharts($(this));
-                    console.log('✓ ArtistCharts instance created successfully');
-                } catch (error) {
-                    console.error('✗ Failed to create ArtistCharts instance:', error);
-                }
-            });
-        } else {
-            console.log('ArtistCharts module not available, skipping charts');
-        }
+        // Wait for ArtistCharts class to be available, then initialize charts
+        const waitForArtistCharts = () => {
+            if (typeof ArtistCharts !== 'undefined') {
+                console.log('ArtistCharts class found, initializing charts...');
+                $('.artist-charts-container').each(function() {
+                    console.log('Creating ArtistCharts instance');
+                    try {
+                        new ArtistCharts($(this));
+                        console.log('✓ ArtistCharts instance created successfully');
+                    } catch (error) {
+                        console.error('✗ Failed to create ArtistCharts instance:', error);
+                    }
+                });
+            } else {
+                console.log('ArtistCharts class not available yet, waiting...');
+                setTimeout(waitForArtistCharts, 100);
+            }
+        };
+        
+        // Start waiting for ArtistCharts
+        waitForArtistCharts();
     }
     
     // ========================================
@@ -261,6 +268,7 @@
         console.log('jQuery available:', typeof $ !== 'undefined');
         console.log('Chart.js available:', typeof Chart !== 'undefined');
         console.log('AJAX data available:', typeof artistChartsAjax !== 'undefined');
+        console.log('ArtistCharts class available:', typeof ArtistCharts !== 'undefined');
         
         // Test basic jQuery functionality
         if (typeof $ !== 'undefined') {

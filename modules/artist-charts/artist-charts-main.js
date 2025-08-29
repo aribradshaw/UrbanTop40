@@ -4,6 +4,16 @@
  * Coordinates all modules and handles user interactions
  */
 
+// Wrap in function to ensure jQuery and other dependencies are available
+(function($) {
+    'use strict';
+    
+    // Check for required dependencies
+    if (typeof $ === 'undefined') {
+        console.error('ArtistCharts: jQuery is not available');
+        return;
+    }
+
 class ArtistCharts {
     constructor(container) {
         this.container = container;
@@ -71,11 +81,17 @@ class ArtistCharts {
         this.hideContent();
         
         try {
+            // Check if jQuery is available
+            if (typeof $ === 'undefined') {
+                throw new Error('jQuery is not loaded. Please check your script dependencies.');
+            }
+            
             // Check if AJAX data is available
             if (typeof artistChartsAjax === 'undefined') {
                 throw new Error('AJAX configuration not loaded. Please refresh the page.');
             }
             
+            console.log('ArtistCharts: Making AJAX request...');
             const response = await $.ajax({
                 url: artistChartsAjax.ajaxurl,
                 type: 'POST',
@@ -85,6 +101,8 @@ class ArtistCharts {
                     nonce: artistChartsAjax.nonce
                 }
             });
+            
+            console.log('ArtistCharts: AJAX response received:', response);
             
             if (response.success) {
                 this.chartData = response.data;
@@ -105,6 +123,13 @@ class ArtistCharts {
     renderChart() {
         if (!this.chartData) return;
         
+        // Check if required dependencies are available
+        if (typeof ChartCore === 'undefined') {
+            console.error('ArtistCharts: ChartCore class not available');
+            this.showError('Chart dependencies not loaded. Please refresh the page.');
+            return;
+        }
+        
         // Get all unique dates and sort them
         this.allDates = new Set();
         this.chartData.songs.forEach(song => {
@@ -115,14 +140,19 @@ class ArtistCharts {
         
         this.allDates = Array.from(this.allDates).sort();
         
-        // Create chart core with current options
-        this.chartCore = new ChartCore(this.container, this.chartData, {
-            startWeek: this.startWeek,
-            visibleWeeks: this.visibleWeeks
-        });
-        
-        // Add scrollbar and week indicator
-        this.addScrollbarAndIndicator();
+        try {
+            // Create chart core with current options
+            this.chartCore = new ChartCore(this.container, this.chartData, {
+                startWeek: this.startWeek,
+                visibleWeeks: this.visibleWeeks
+            });
+            
+            // Add scrollbar and week indicator
+            this.addScrollbarAndIndicator();
+        } catch (error) {
+            console.error('Error creating chart:', error);
+            this.showError('Failed to create chart: ' + error.message);
+        }
     }
     
     updateStats() {
@@ -245,8 +275,12 @@ class ArtistCharts {
         `);
         chartContainer.before(weekIndicator);
         
-        // Initialize scrollbar
-        this.scrollbar = new ChartScrollbar(this.container, this);
+        // Initialize scrollbar if available
+        if (typeof ChartScrollbar !== 'undefined') {
+            this.scrollbar = new ChartScrollbar(this.container, this);
+        } else {
+            console.warn('ArtistCharts: ChartScrollbar class not available, scrollbar disabled');
+        }
     }
     
     updateScrollbarPosition() {
@@ -345,7 +379,12 @@ class ArtistCharts {
     }
 }
 
+// Make ArtistCharts available globally
+window.ArtistCharts = ArtistCharts;
+
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ArtistCharts;
 }
+
+})(jQuery);
