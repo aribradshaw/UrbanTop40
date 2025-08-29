@@ -1,10 +1,9 @@
 /**
  * Chart Core Module
  * 
- * Handles the main Chart.js rendering and data management
+ * Simple, working Chart.js implementation
  */
 
-// Wrap in function to ensure jQuery is available
 (function($) {
     'use strict';
 
@@ -14,7 +13,6 @@ class ChartCore {
         this.chartData = chartData;
         this.options = options;
         this.chart = null;
-        this.consolidatedXAxis = [];
         
         this.init();
     }
@@ -24,7 +22,7 @@ class ChartCore {
     }
     
     renderChart() {
-        if (!this.chartData) return;
+        if (!this.chartData || !this.chartData.songs) return;
         
         // Destroy existing chart if it exists
         if (this.chart) {
@@ -47,10 +45,7 @@ class ChartCore {
         // Create the chart
         this.chart = new Chart(ctx, {
             type: 'line',
-            data: {
-                ...chartData,
-                labels: this.consolidatedXAxis || []
-            },
+            data: chartData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -82,26 +77,22 @@ class ChartCore {
                 },
                 scales: {
                     x: {
-                        type: 'category',
+                        type: 'time',
+                        time: {
+                            unit: 'week',
+                            displayFormats: {
+                                week: 'MMM d, yyyy'
+                            }
+                        },
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)'
                         },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.7)',
-                            maxRotation: 45,
-                            callback: (value, index, ticks) => {
-                                // Simple date formatting
-                                const label = this.consolidatedXAxis[index];
-                                if (label instanceof Date) {
-                                    return label.toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: '2-digit', 
-                                        year: 'numeric' 
-                                    });
-                                }
-                                return value;
-                            }
-                        }
+                            maxRotation: 45
+                        },
+                        min: undefined,
+                        max: undefined
                     },
                     y: {
                         reverse: true, // #1 at top, #100 at bottom
@@ -124,10 +115,6 @@ class ChartCore {
                     line: {
                         tension: 0.1
                     }
-                },
-                parsing: {
-                    xAxisKey: 'x',
-                    yAxisKey: 'y'
                 }
             }
         });
@@ -136,29 +123,37 @@ class ChartCore {
     prepareChartData() {
         if (!this.chartData || !this.chartData.songs) return { datasets: [] };
         
-        // SIMPLE APPROACH: Get ALL dates with chart data, no filtering
-        const allDates = new Set();
-        this.chartData.songs.forEach(song => {
-            song.chartHistory.forEach(entry => {
-                allDates.add(entry.date);
-            });
+        const datasets = [];
+        const colors = [
+            '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336',
+            '#00BCD4', '#FF5722', '#795548', '#607D8B', '#E91E63'
+        ];
+        
+        // Process each song
+        this.chartData.songs.forEach((song, songIndex) => {
+            const color = colors[songIndex % colors.length];
+            
+            // Create data points for this song
+            const data = song.chartHistory.map(entry => ({
+                x: new Date(entry.date),
+                y: entry.position
+            }));
+            
+            if (data.length > 0) {
+                datasets.push({
+                    label: song.song,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                });
+            }
         });
         
-        const sortedDates = Array.from(allDates).sort();
-        
-        // Use ALL dates, not just a subset
-        const visibleDates = sortedDates;
-        
-        // Process the data with all dates
-        const processedData = ChartDataProcessor.processChartData(this.chartData, visibleDates);
-        
-        // Store the consolidated X-axis data
-        this.consolidatedXAxis = processedData.xAxis;
-        
-        return { datasets: processedData.datasets };
+        return { datasets };
     }
-    
-
     
     updateChartData(newOptions = {}) {
         if (!this.chart) return;

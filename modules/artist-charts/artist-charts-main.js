@@ -1,10 +1,9 @@
 /**
  * Main Artist Charts Class
  * 
- * Coordinates all modules and handles user interactions
+ * Simple, working chart implementation
  */
 
-// Wrap in function to ensure jQuery and other dependencies are available
 (function($) {
     'use strict';
     
@@ -21,10 +20,6 @@ class ArtistCharts {
         this.chartData = null;
         this.chartCore = null;
         this.scrollbar = null;
-        this.visibleWeeks = 10; // Default to first 10 weeks
-        this.startWeek = 0; // Which week to start from (for panning)
-        this.allDates = [];
-        this.updateTimeout = null; // For debouncing chart updates
         
         this.init();
     }
@@ -37,34 +32,22 @@ class ArtistCharts {
     bindEvents() {
         console.log('Binding events for artist charts');
         
-        // Combined wheel event handler for zoom and horizontal scrolling
-        this.container.on('wheel', '.chart-area', (e) => {
-            console.log('Wheel event detected');
-            e.preventDefault();
-            
-            if (e.shiftKey) {
-                // Shift + wheel = horizontal scrolling/panning
-                console.log('Shift+wheel detected - horizontal scroll');
-                this.handleHorizontalScroll(e);
-            } else {
-                // Regular wheel = zoom
-                console.log('Regular wheel detected - zoom');
-                this.handleZoom(e);
-            }
-        });
-        
-        // Handle horizontal trackpad scrolling (deltaX)
-        this.container.on('wheel', '.chart-area', (e) => {
-            if (Math.abs(e.originalEvent.deltaX) > Math.abs(e.originalEvent.deltaY)) {
-                console.log('Horizontal trackpad scroll detected');
-                e.preventDefault();
-                this.handleTrackpadHorizontalScroll(e);
-            }
-        });
-        
         // Error retry
         this.container.on('click', '.error-retry', () => {
             this.loadArtistData();
+        });
+        
+        // Basic zoom and pan functionality
+        this.container.on('wheel', '.chart-area', (e) => {
+            e.preventDefault();
+            
+            if (e.shiftKey) {
+                // Shift + wheel = horizontal panning
+                this.handlePan(e);
+            } else {
+                // Regular wheel = zoom
+                this.handleZoom(e);
+            }
         });
         
         // Handle window resize to prevent Chart.js errors
@@ -130,28 +113,50 @@ class ArtistCharts {
             return;
         }
         
-        // Get all unique dates and sort them
-        this.allDates = new Set();
-        this.chartData.songs.forEach(song => {
-            song.chartHistory.forEach(entry => {
-                this.allDates.add(entry.date);
-            });
-        });
-        
-        this.allDates = Array.from(this.allDates).sort();
-        
         try {
-            // Create chart core with current options
-            this.chartCore = new ChartCore(this.container, this.chartData, {
-                startWeek: this.startWeek,
-                visibleWeeks: this.visibleWeeks
-            });
+            // Create chart core with all data (no filtering)
+            this.chartCore = new ChartCore(this.container, this.chartData);
             
             // Add scrollbar and week indicator
             this.addScrollbarAndIndicator();
         } catch (error) {
             console.error('Error creating chart:', error);
             this.showError('Failed to create chart: ' + error.message);
+        }
+    }
+    
+    handleZoom(e) {
+        if (!this.chartCore || !this.chartCore.chart) return;
+        
+        const delta = e.originalEvent.deltaY > 0 ? 0.9 : 1.1;
+        const chart = this.chartCore.chart;
+        
+        // Simple zoom by adjusting the chart's scale
+        if (chart.options.scales.x.min && chart.options.scales.x.max) {
+            const range = chart.options.scales.x.max - chart.options.scales.x.min;
+            const center = (chart.options.scales.x.min + chart.options.scales.x.max) / 2;
+            const newRange = range * delta;
+            
+            chart.options.scales.x.min = center - newRange / 2;
+            chart.options.scales.x.max = center + newRange / 2;
+            chart.update('none');
+        }
+    }
+    
+    handlePan(e) {
+        if (!this.chartCore || !this.chartCore.chart) return;
+        
+        const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
+        const chart = this.chartCore.chart;
+        
+        // Simple pan by shifting the chart's scale
+        if (chart.options.scales.x.max) {
+            const range = chart.options.scales.x.max - chart.options.scales.x.min;
+            const shift = range * 0.1 * delta;
+            
+            chart.options.scales.x.min += shift;
+            chart.options.scales.x.max += shift;
+            chart.update('none');
         }
     }
     
@@ -172,105 +177,17 @@ class ArtistCharts {
         this.container.find('#week-count').text(`${numberOnes} Number Ones`);
     }
     
-    handleZoom(e) {
-        console.log('Zoom event:', e.originalEvent.deltaY);
-        const delta = e.originalEvent.deltaY > 0 ? 1.1 : 0.9; // Inverted: scroll up = zoom out, scroll down = zoom in
-        const newVisibleWeeks = Math.round(this.visibleWeeks * delta);
-        
-        // Clamp between 5 and total available weeks
-        this.visibleWeeks = Math.max(5, Math.min(this.allDates.length, newVisibleWeeks));
-        
-        // Adjust startWeek if we're zooming out and would go beyond available data
-        const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
-        if (this.startWeek > maxStartWeek) {
-            this.startWeek = maxStartWeek;
-        }
-        
-        console.log(`Zoom: ${this.visibleWeeks} -> ${newVisibleWeeks} weeks, startWeek: ${this.startWeek}`);
-        
-        // Update the chart with new data
-        this.updateChartData();
-    }
-    
-    updateChartData() {
-        if (!this.chartCore || !this.chartData) return;
-        
-        // Clear any pending update
-        if (this.updateTimeout) {
-            clearTimeout(this.updateTimeout);
-        }
-        
-        // Debounce the update to prevent rapid changes
-        this.updateTimeout = setTimeout(() => {
-            this._performChartUpdate();
-        }, 50); // 50ms delay
-    }
-    
-    _performChartUpdate() {
-        try {
-            // Update the chart core with new options
-            this.chartCore.updateChartData({
-                startWeek: this.startWeek,
-                visibleWeeks: this.visibleWeeks
-            });
-            
-            // Update the week indicator and scrollbar position
-            this.updateScrollbarPosition();
-            
-        } catch (error) {
-            console.error('Error updating chart data:', error);
-            // Fallback: recreate the chart if update fails
-            this.renderChart();
-        }
-    }
-    
-    handleHorizontalScroll(e) {
-        console.log('Horizontal scroll event:', e.originalEvent.deltaY);
-        const delta = e.originalEvent.deltaY > 0 ? 1 : -1;
-        const scrollAmount = Math.max(1, Math.floor(this.visibleWeeks / 4)); // Scroll by 1/4 of visible weeks
-        
-        // Calculate new start week
-        let newStartWeek = this.startWeek + (delta * scrollAmount);
-        
-        // Clamp to valid range
-        const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
-        newStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
-        
-        if (newStartWeek !== this.startWeek) {
-            console.log(`Horizontal scroll: ${this.startWeek} -> ${newStartWeek}`);
-            this.startWeek = newStartWeek;
-            this.updateChartData();
-            this.updateScrollbarPosition();
-        }
-    }
-    
-    handleTrackpadHorizontalScroll(e) {
-        console.log('Trackpad horizontal scroll event:', e.originalEvent.deltaX);
-        const delta = e.originalEvent.deltaX > 0 ? -1 : 1; // Invert for natural feel
-        const scrollAmount = Math.max(1, Math.floor(this.visibleWeeks / 8)); // Smaller increments for trackpad
-        
-        // Calculate new start week
-        let newStartWeek = this.startWeek + (delta * scrollAmount);
-        
-        // Clamp to valid range
-        const maxStartWeek = Math.max(0, this.allDates.length - this.visibleWeeks);
-        newStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
-        
-        if (newStartWeek !== this.startWeek) {
-            console.log(`Trackpad horizontal scroll: ${this.startWeek} -> ${newStartWeek}`);
-            this.startWeek = newStartWeek;
-            this.updateChartData();
-            this.updateScrollbarPosition();
-        }
-    }
-    
     addScrollbarAndIndicator() {
         const chartContainer = this.container.find('#chart-container');
         
         // Add week indicator above chart
+        const totalWeeks = this.chartData.songs.reduce((total, song) => {
+            return total + song.chartHistory.length;
+        }, 0);
+        
         const weekIndicator = $(`
             <div class="week-indicator">
-                <span class="week-range">Weeks ${this.startWeek + 1}-${Math.min(this.startWeek + this.visibleWeeks, this.allDates.length)} of ${this.allDates.length}</span>
+                <span class="week-range">Total Chart Weeks: ${totalWeeks}</span>
             </div>
         `);
         chartContainer.before(weekIndicator);
@@ -281,54 +198,14 @@ class ArtistCharts {
         } else {
             console.warn('ArtistCharts: ChartScrollbar class not available, scrollbar disabled');
         }
-    }
-    
-    updateScrollbarPosition() {
-        const weekIndicator = this.container.find('.week-indicator .week-range');
         
-        if (weekIndicator.length) {
-            weekIndicator.text(`Weeks ${this.startWeek + 1}-${Math.min(this.startWeek + this.visibleWeeks, this.allDates.length)} of ${this.allDates.length}`);
-        }
-        
-        if (this.scrollbar) {
-            this.scrollbar.updatePosition();
-        }
-    }
-    
-    getScrollbarPosition() {
-        if (this.allDates.length <= this.visibleWeeks) return 0;
-        const maxStartWeek = this.allDates.length - this.visibleWeeks;
-        if (maxStartWeek <= 0) return 0;
-        
-        // Calculate position as a percentage of the scrollable area
-        const position = (this.startWeek / maxStartWeek) * 100;
-        
-        // Ensure the position is within bounds and accounts for thumb width
-        const thumbWidth = 60; // Width of scrollbar thumb in pixels
-        const trackWidth = this.container.find('.scrollbar-track').width() || 400; // Fallback width
-        const thumbWidthPercent = (thumbWidth / trackWidth) * 100;
-        
-        // Adjust position so thumb doesn't go beyond track boundaries
-        return Math.max(0, Math.min(100 - thumbWidthPercent, position));
-    }
-    
-    setScrollbarPosition(percentage) {
-        if (this.allDates.length <= this.visibleWeeks) return;
-        
-        const maxStartWeek = this.allDates.length - this.visibleWeeks;
-        const newStartWeek = Math.round((percentage / 100) * maxStartWeek);
-        const clampedStartWeek = Math.max(0, Math.min(maxStartWeek, newStartWeek));
-        
-        if (clampedStartWeek !== this.startWeek) {
-            console.log(`Setting scrollbar position: ${percentage}% -> week ${clampedStartWeek}`);
-            this.startWeek = clampedStartWeek;
-            
-            // Update the chart data
-            this.updateChartData();
-            
-            // Update the week indicator and scrollbar position
-            this.updateScrollbarPosition();
-        }
+        // Add simple zoom hint
+        const zoomHint = $(`
+            <div class="zoom-hint-subtle">
+                Scroll to zoom • Shift+Scroll to pan
+            </div>
+        `);
+        chartContainer.after(zoomHint);
     }
     
     showLoading() {
@@ -358,23 +235,18 @@ class ArtistCharts {
     
     // Cleanup method to prevent memory leaks
     destroy() {
-        if (this.updateTimeout) {
-            clearTimeout(this.updateTimeout);
-            this.updateTimeout = null;
-        }
-        
         if (this.chartCore) {
             this.chartCore.destroy();
             this.chartCore = null;
         }
         
         if (this.scrollbar) {
+            this.scrollbar.destroy();
             this.scrollbar = null;
         }
         
         // Remove event listeners
         this.container.off();
-        $(document).off('mousemove mousemove touchmove touchend');
         $(window).off('resize');
     }
 }
