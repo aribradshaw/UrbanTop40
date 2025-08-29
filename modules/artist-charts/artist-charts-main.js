@@ -282,11 +282,21 @@ class ArtistCharts {
         
         if (currentMin && currentMax && this.chartCore.allDates && this.chartCore.allDates.length > 0) {
             try {
-                // Find the closest dates in allDates to the current view
-                const firstDate = new Date(this.chartCore.allDates[0]);
-                const lastDate = new Date(this.chartCore.allDates[this.chartCore.allDates.length - 1]);
+                // Get the actual data boundaries
+                const firstDataDate = new Date(this.chartCore.allDates[0]);
+                const lastDataDate = new Date(this.chartCore.allDates[this.chartCore.allDates.length - 1]);
                 
-                // Calculate which weeks these represent
+                // Ensure we're not showing dates beyond the data range
+                if (currentMin < firstDataDate || currentMax > lastDataDate) {
+                    console.warn('Chart view is outside data boundaries, resetting...');
+                    // Reset chart to valid range
+                    chart.options.scales.x.min = firstDataDate;
+                    chart.options.scales.x.max = new Date(firstDataDate.getTime() + (this.chartCore.visibleWeeks * 7 * 24 * 60 * 60 * 1000));
+                    chart.update('none');
+                    return;
+                }
+                
+                // Calculate which weeks these represent in the actual data
                 const startWeek = this.chartCore.allDates.findIndex(date => {
                     const dateObj = new Date(date);
                     return Math.abs(dateObj.getTime() - currentMin.getTime()) < (24 * 60 * 60 * 1000);
@@ -297,7 +307,7 @@ class ArtistCharts {
                     return Math.abs(dateObj.getTime() - currentMax.getTime()) < (24 * 60 * 60 * 1000);
                 });
                 
-                if (startWeek !== -1 && endWeek !== -1) {
+                if (startWeek !== -1 && endWeek !== -1 && startWeek <= endWeek) {
                     const weekText = `Weeks ${startWeek + 1}-${endWeek + 1} of ${this.chartCore.allDates.length}`;
                     this.weekIndicator.find('.week-range').text(weekText);
                     
@@ -305,18 +315,9 @@ class ArtistCharts {
                         this.updateScrollbarPosition(startWeek, this.chartCore.allDates.length);
                     }
                 } else {
-                    // Fallback: calculate weeks based on date differences
-                    const startDiff = Math.floor((currentMin - firstDate) / (7 * 24 * 60 * 60 * 1000));
-                    const endDiff = Math.floor((currentMax - firstDate) / (7 * 24 * 60 * 60 * 1000));
-                    
-                    if (startDiff >= 0 && endDiff >= startDiff) {
-                        const weekText = `Weeks ${startDiff + 1}-${endDiff + 1} of ${this.chartCore.allDates.length}`;
-                        this.weekIndicator.find('.week-range').text(weekText);
-                    } else {
-                        // Last resort: show current visible weeks
-                        const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
-                        this.weekIndicator.find('.week-range').text(weekText);
-                    }
+                    // Fallback: show current visible weeks based on startWeek
+                    const weekText = `Weeks ${this.chartCore.startWeek + 1}-${this.chartCore.startWeek + this.chartCore.visibleWeeks} of ${this.chartCore.allDates.length}`;
+                    this.weekIndicator.find('.week-range').text(weekText);
                 }
             } catch (error) {
                 console.error('Error updating week indicator:', error);

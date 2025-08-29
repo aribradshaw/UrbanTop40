@@ -34,13 +34,30 @@ class ChartCore {
     }
     
     renderChart() {
-        if (!this.chartData || !this.chartData.songs) return;
-        
-        // Destroy existing chart if it exists
-        if (this.chart) {
-            this.chart.destroy();
-            this.chart = null;
+        if (!this.allDates || this.allDates.length === 0) {
+            console.error('No valid dates found for chart');
+            return;
         }
+        
+        const startDate = new Date(this.allDates[this.startWeek]);
+        const endWeek = Math.min(this.startWeek + this.visibleWeeks, this.allDates.length);
+        const endDate = new Date(this.allDates[endWeek - 1]);
+        
+        // Ensure we're within data boundaries
+        const firstDataDate = new Date(this.allDates[0]);
+        const lastDataDate = new Date(this.allDates[this.allDates.length - 1]);
+        
+        if (startDate < firstDataDate || endDate > lastDataDate) {
+            console.warn('Initial chart range outside data boundaries, resetting to first 10 weeks');
+            this.startWeek = 0;
+            this.visibleWeeks = 10;
+            const newStartDate = new Date(this.allDates[0]);
+            const newEndDate = new Date(this.allDates[Math.min(9, this.allDates.length - 1)]);
+            startDate = newStartDate;
+            endDate = newEndDate;
+        }
+
+        const chartData = this.prepareChartData();
         
         const chartContainer = this.container.find('#chart-container');
         chartContainer.empty();
@@ -50,24 +67,6 @@ class ChartCore {
         chartContainer.append(canvas);
         
         const ctx = canvas[0].getContext('2d');
-        
-        // Prepare data for Chart.js
-        const chartData = this.prepareChartData();
-        
-        // Get all unique dates and sort them
-        this.allDates = new Set();
-        this.chartData.songs.forEach(song => {
-            song.chartHistory.forEach(entry => {
-                this.allDates.add(entry.date);
-            });
-        });
-        this.allDates = Array.from(this.allDates).sort();
-        
-        // Calculate initial visible range
-        const totalWeeks = this.allDates.length;
-        const endWeek = Math.min(this.startWeek + this.visibleWeeks, totalWeeks);
-        const startDate = new Date(this.allDates[this.startWeek]);
-        const endDate = new Date(this.allDates[endWeek - 1]);
         
         // Create the chart
         this.chart = new Chart(ctx, {
@@ -284,6 +283,8 @@ class ChartCore {
     
     // Constrain zoom to stay within data boundaries
     constrainZoom(newMin, newMax) {
+        if (!this.allDates || this.allDates.length === 0) return { min: newMin, max: newMax };
+        
         const firstDate = new Date(this.allDates[0]);
         const lastDate = new Date(this.allDates[this.allDates.length - 1]);
         
@@ -306,6 +307,8 @@ class ChartCore {
     
     // Constrain pan to stay within data boundaries
     constrainPan(newMin, newMax) {
+        if (!this.allDates || this.allDates.length === 0) return { min: newMin, max: newMax };
+        
         const firstDate = new Date(this.allDates[0]);
         const lastDate = new Date(this.allDates[this.allDates.length - 1]);
         const range = newMax - newMin;
